@@ -71,15 +71,17 @@ Follow-up:
 
 ## ImageIO plugin migration
 
-Tests currently emit deprecation warnings from ImageIO's legacy
-`FormatManager.add_format` API used by `vidhash.py`.
+The `VIDHASH` format registration was migrated away from ImageIO's deprecated
+`FormatManager.add_format` API on 2026-07-02. Tests now run without ImageIO
+deprecation warnings.
 
-Planned fix:
+Follow-up:
 
-- Keep the current copied plugin while stabilizing the project structure.
-- Later migrate `VIDHASH` registration to ImageIO v3's plugin/config API.
-- Verify that old command behavior and frame iteration stay compatible before
-  removing the legacy registration path.
+- Keep the current copied ffmpeg-derived plugin while stabilizing the project
+  structure.
+- Later review whether the whole `VIDHASH` reader should be rewritten as a
+  native ImageIO v3 plugin. Do this only if frame iteration and metadata
+  behavior can be verified against real files.
 
 ## Media repair side tool
 

@@ -29,7 +29,7 @@ import logging
 
 import numpy as np
 
-from imageio import formats
+from imageio.config import FileExtension, PluginConfig, known_extensions, known_plugins
 from imageio.core import (Format, get_remote_file, read_n_bytes,
                         image_as_uint, get_platform,
                         InternetNotAllowedError, NeedDownloadError)
@@ -936,6 +936,39 @@ def get_output_video_line(lines):
                 return line
 
 
-# Register. You register an *instance* of a Format class.
-format = VidHashFormat('vidhash', 'Many video formats and cameras (via ffmpeg)', '.mov .avi .mpg .mpeg .mp4 .mkv .wmv .asf .flv .ts', 'I')
-formats.add_format(format)
+def register_vidhash_format():
+    """Register the legacy vidhash ImageIO format without deprecated APIs."""
+    fmt = VidHashFormat(
+        'vidhash',
+        'Many video formats and cameras (via ffmpeg)',
+        '.mov .avi .mpg .mpeg .mp4 .mkv .wmv .asf .flv .ts',
+        'I',
+    )
+    config = PluginConfig(
+        name=fmt.name.upper(),
+        class_name=fmt.__class__.__name__,
+        module_name=fmt.__class__.__module__,
+        is_legacy=True,
+        install_name="unknown",
+        legacy_args={
+            "name": fmt.name,
+            "description": fmt.description,
+            "extensions": " ".join(fmt.extensions),
+            "modes": fmt.modes,
+        },
+    )
+    known_plugins[config.name] = config
+    for extension in fmt.extensions:
+        ext = FileExtension(
+            extension=extension,
+            priority=[config.name],
+            name="Unique Format",
+            description=(
+                "A format inserted at runtime. "
+                f"It is being read by the `{config.name}` plugin."
+            ),
+        )
+        known_extensions.setdefault(extension, list()).append(ext)
+
+
+register_vidhash_format()
