@@ -125,21 +125,93 @@ class HnswlibBackend(KNNBackend):
         return self.items[rownum]
 
 
+class SklearnBackend(KNNBackend):
+    name = "sklearn"
+
+    def __init__(self, index_length: int, fixspeed: bool = False):
+        super().__init__(index_length, fixspeed)
+        self.module = importlib.import_module("sklearn.neighbors")
+
+    def build(self, items: list[Vector]) -> None:
+        logging.info("Start building sklearn exact nearest-neighbor index")
+        self.items = np.array(self._normalize_speed(items), dtype=float)
+        self.idx = self.module.NearestNeighbors(metric="euclidean")
+        self.idx.fit(self.items)
+
+    def __len__(self) -> int:
+        return len(self.items)
+
+    def neighbors_within(self, rownum: int, radius: float) -> list[int]:
+        elem_idx = self.idx.radius_neighbors(self.items[rownum:rownum + 1], radius=radius, return_distance=False)
+        return [int(item) for item in elem_idx[0]]
+
+    def row(self, rownum: int):
+        return self.items[rownum]
+
+
+class FaissBackend(KNNBackend):
+    name = "faiss"
+
+    def __init__(self, index_length: int, fixspeed: bool = False):
+        super().__init__(index_length, fixspeed)
+        self.module = importlib.import_module("faiss")
+
+    def build(self, items: list[Vector]) -> None:
+        logging.info("Start building faiss exact L2 index")
+        self.items = np.ascontiguousarray(self._normalize_speed(items), dtype=np.float32)
+        self.idx = self.module.IndexFlatL2(self.index_length)
+        self.idx.add(self.items)
+
+    def __len__(self) -> int:
+        return int(self.idx.ntotal)
+
+    def neighbors_within(self, rownum: int, radius: float) -> list[int]:
+        _, _, elem_idx = self.idx.range_search(self.items[rownum:rownum + 1], radius * radius)
+        return [int(item) for item in elem_idx]
+
+    def row(self, rownum: int):
+        return self.items[rownum]
+
+
+class PyNNDescentBackend(KNNBackend):
+    name = "pynndescent"
+
+    def __init__(self, index_length: int, fixspeed: bool = False):
+        super().__init__(index_length, fixspeed)
+        self.module = importlib.import_module("pynndescent")
+
+    def build(self, items: list[Vector]) -> None:
+        logging.info("Start building pynndescent approximate nearest-neighbor index")
+        self.items = np.array(self._normalize_speed(items), dtype=float)
+        self.neighbor_count = min(20, len(self.items))
+        self.idx = self.module.NNDescent(self.items, metric="euclidean", n_neighbors=self.neighbor_count)
+
+    def __len__(self) -> int:
+        return len(self.items)
+
+    def neighbors_within(self, rownum: int, radius: float) -> list[int]:
+        elem_idx, elem_dists = self.idx.query(self.items[rownum:rownum + 1], k=self.neighbor_count)
+        return [int(item) for n, item in enumerate(elem_idx[0]) if elem_dists[0][n] < radius]
+
+    def row(self, rownum: int):
+        return self.items[rownum]
+
+
 BACKENDS = {
     "annoy": AnnoyBackend,
     "cyflann": CyflannBackend,
+    "faiss": FaissBackend,
     "hnswlib": HnswlibBackend,
+    "pynndescent": PyNNDescentBackend,
+    "sklearn": SklearnBackend,
 }
 
 
 def available_backends() -> list[str]:
     result = []
     for name in KNN_BACKEND_PRIORITY:
-        try:
-            importlib.import_module(name)
-        except ModuleNotFoundError:
-            continue
-        result.append(name)
+        if importlib.util.find_spec(name) is not None:
+            result.append(name)
     return result
 
 

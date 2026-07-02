@@ -54,14 +54,17 @@ The default priority remains:
 2. `cyflann`
 3. `annoy`
 
-Future explicit backends:
+Implemented explicit backends:
 
 - `sklearn.neighbors.NearestNeighbors` as an exact baseline.
 - `faiss` for larger vector sets and benchmark comparison.
 - `pynndescent` for approximate-neighbor comparison.
 
-Do not change the default priority until search output and runtime are compared
-on copied real databases.
+Follow-up:
+
+- Compare search output and runtime across `hnswlib`, `annoy`, `sklearn`,
+  `faiss`, and `pynndescent` on copied real databases.
+- Do not change the default priority until that comparison is complete.
 
 ## ImageIO plugin migration
 

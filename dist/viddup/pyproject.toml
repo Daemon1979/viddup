@@ -20,7 +20,10 @@ dependencies = [
 annoy = ["annoy"]
 hnswlib = ["hnswlib"]
 cyflann = ["cyflann"]
+faiss = ["faiss-cpu"]
+pynndescent = ["pynndescent"]
 sklearn = ["scikit-learn"]
+knn-extra = ["faiss-cpu", "pynndescent", "scikit-learn"]
 test = ["pytest"]
 
 [project.scripts]

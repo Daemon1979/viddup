@@ -31,13 +31,24 @@ python -m pip install -e ".[test]"
 The project may use system packages for heavy dependencies such as `scipy`,
 `scikit-learn`, `faiss`, `pynndescent`, `hnswlib`, or `annoy`.
 
-At least one legacy KNN backend must be importable:
+At least one KNN backend must be importable. The legacy priority is preserved
+for automatic backend selection:
 
 1. `hnswlib`
 2. `cyflann`
 3. `annoy`
 
-That priority is preserved for the default backend when several are installed.
+Additional explicit backends are available for comparison:
+
+- `sklearn` - exact `NearestNeighbors` baseline.
+- `faiss` - exact L2 index for larger vector sets.
+- `pynndescent` - approximate-neighbor backend.
+
+Use `--knnlib NAME` to force a backend, for example:
+
+```sh
+dupfind --db videos.db --search --knnlib sklearn
+```
 
 ## Usage
 

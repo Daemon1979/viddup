@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from . import FileInfo  # noqa: F401  FileInfo needed by yaml Loader
 from .importer import handle_import
-from .knn import available_backends, default_backend_name
+from .knn import BACKENDS, available_backends, default_backend_name
 from .scanner import get_files
 from .search import handle_search
 from .settings import KNOWN_VID_TYPES_DEFAULT
@@ -228,7 +228,7 @@ def main(argv: list[str] | None = None) -> int:
     if params.search:
         available = available_backends()
         if not available:
-            logging.error("Please install at least one KNN library: hnswlib, cyflann, or annoy")
+            logging.error("Please install at least one KNN library: %s", ", ".join(BACKENDS))
             return 1
         if params.knnlib is None:
             params.knnlib = default_backend_name()
