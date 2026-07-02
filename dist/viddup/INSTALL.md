@@ -66,12 +66,16 @@ For development and local tests:
 python -m pip install -e ".[test]"
 ```
 
-If `hnswlib` was not installed by the OS and you want to try installing it via
-pip:
+If `hnswlib` was not installed by the OS, the recommended fallback is to install
+it from the upstream project inside the activated venv:
 
 ```sh
-python -m pip install hnswlib
+git clone https://github.com/nmslib/hnswlib.git
+cd hnswlib
+python -m pip install .
 ```
+
+Project page: <https://github.com/nmslib/hnswlib>
 
 ## 4. Verify the install
 
@@ -193,4 +197,3 @@ Slow exact backends:
 
 `sklearn` and `faiss` can be much slower because they are used as exact radius
 baselines. This is expected; prefer `hnswlib` for normal runs.
-

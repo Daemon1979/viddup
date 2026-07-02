@@ -65,12 +65,16 @@ python -m pip install -e .
 python -m pip install -e ".[test]"
 ```
 
-Якщо `hnswlib` не був встановлений системно і хочеш спробувати поставити його
-через pip:
+Якщо `hnswlib` не був встановлений системно, рекомендований fallback -
+поставити його з upstream-проєкту всередині активованого venv:
 
 ```sh
-python -m pip install hnswlib
+git clone https://github.com/nmslib/hnswlib.git
+cd hnswlib
+python -m pip install .
 ```
+
+Сторінка проєкту: <https://github.com/nmslib/hnswlib>
 
 ## 4. Перевірити встановлення
 
@@ -192,4 +196,3 @@ Please install at least one KNN library
 
 `sklearn` і `faiss` можуть бути дуже повільні, бо використовуються як точний
 radius baseline. Це нормально; для звичайного запуску краще `hnswlib`.
-
