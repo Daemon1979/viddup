@@ -74,7 +74,7 @@ Skip noisy directories during scan:
 ```sh
 dupfind --db videos.db --dir /PATH/video \
   --exclude-dir /PATH/video/skip-this-dir \
-  --exclude-dir /PATH/other-media
+  --exclude-dir /PATH/photos
 ```
 
 Search duplicates:
@@ -124,7 +124,6 @@ pytest
 - `src/viddup/knn.py` - KNN backend registry and adapters.
 - `src/viddup/scanner.py` - directory walking, extension filtering, excludes.
 - `src/viddup/sqlite_db.py` - SQLite storage.
-- `docs/TODO.md` - follow-up work discovered during real scans.
 
 ## Notes
 
