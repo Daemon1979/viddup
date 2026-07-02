@@ -16,6 +16,7 @@ from .utils import format_duration
 
 
 DEFAULT_FALLBACK_FPS = 25.0
+FFPROBE_NOT_FOUND = "ffprobe not found"
 MAX_REASONABLE_FPS = 240.0
 
 
@@ -59,8 +60,8 @@ def probe_metadata(vidname: str) -> ProbeMetadata:
     ]
     try:
         proc = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
-    except FileNotFoundError as exc:
-        return ProbeMetadata(has_video=False, error=str(exc))
+    except FileNotFoundError:
+        return ProbeMetadata(has_video=False, error=FFPROBE_NOT_FOUND)
     except subprocess.TimeoutExpired:
         return ProbeMetadata(has_video=False, error="ffprobe timeout")
 
@@ -109,11 +110,18 @@ def fix_duration(vidname: str) -> None:
 
 
 def get_hashes(vidname: str, fix: bool = True):
+    probe = probe_metadata(vidname)
+    if probe.error == FFPROBE_NOT_FOUND:
+        logging.warning("ffprobe not found; falling back to imageio-only metadata path")
+        probe = None
+    elif not probe.has_video:
+        reason = probe.error or "no video stream"
+        raise VideoHashSkip(reason)
+
     try:
         video = imageio.get_reader(vidname, "vidhash")
     except Exception as exc:
-        probe = probe_metadata(vidname)
-        if not probe.has_video:
+        if probe is not None and not probe.has_video:
             reason = probe.error or "no video stream"
             raise VideoHashSkip(reason) from exc
         raise
@@ -125,10 +133,13 @@ def get_hashes(vidname: str, fix: bool = True):
         fix_duration(vidname)
         logging.info("Duration of %s hopefully fixed", vidname)
         return get_hashes(vidname, False)
-    probe = None
     if "duration" not in md or fps <= 0:
-        probe = probe_metadata(vidname)
-        if not probe.has_video:
+        if probe is None:
+            probe = probe_metadata(vidname)
+        if probe.error == FFPROBE_NOT_FOUND:
+            logging.warning("ffprobe not found; using imageio metadata only for %s", vidname)
+            probe = None
+        elif not probe.has_video:
             reason = probe.error or "no video stream"
             raise VideoHashSkip(reason)
 

@@ -1,6 +1,7 @@
 import pytest
 
-from viddup.hashing import VideoHashSkip, _parse_rate, get_extrema
+from viddup import hashing
+from viddup.hashing import ProbeMetadata, VideoHashSkip, _parse_rate, get_extrema
 
 
 def test_get_extrema_returns_frame_and_delta_seconds():
@@ -20,3 +21,15 @@ def test_parse_rate_rejects_unreasonable_ffmpeg_timebases():
     assert _parse_rate("0/0") is None
     assert _parse_rate("1000/1") is None
     assert _parse_rate("90000/1") is None
+
+
+def test_get_hashes_skips_non_video_before_imageio(monkeypatch):
+    monkeypatch.setattr(hashing, "probe_metadata", lambda _: ProbeMetadata(has_video=False, error="no video stream"))
+
+    def fail_get_reader(*args, **kwargs):
+        raise AssertionError("imageio should not be called for probe-confirmed non-video")
+
+    monkeypatch.setattr(hashing.imageio, "get_reader", fail_get_reader)
+
+    with pytest.raises(VideoHashSkip, match="no video stream"):
+        hashing.get_hashes("audio-only.mp4")
