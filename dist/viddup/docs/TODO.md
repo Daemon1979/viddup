@@ -75,6 +75,30 @@ Planned fix:
 - Verify that old command behavior and frame iteration stay compatible before
   removing the legacy registration path.
 
+## Media repair side tool
+
+Keep this separate from duplicate search. `dupfind` should keep hashing and
+search behavior predictable; repair operations should be explicit and write to
+new files first.
+
+Seed registry:
+
+- `docs/PROBLEM_MEDIA.md`
+
+Planned repair tool capabilities:
+
+- Read a list/registry of problematic media files with path, ffprobe metadata,
+  original failure class, and suggested handling.
+- Classify files into:
+  - audio-only/non-video: move/exclude/rename, no video repair.
+  - tiny/truncated/corrupt: verify source or restore from backup.
+  - container/metadata issue: try remux to a new file with `ffmpeg -i input -c copy output`.
+  - codec/decoder issue: optionally transcode to a modern container/codecs.
+- Always write repaired output to a separate path first.
+- Run `ffprobe` before and after repair and save a report.
+- Never replace/delete originals without an explicit destructive flag.
+- Optionally generate shell commands first in dry-run mode.
+
 ## Scan filtering
 
 Implemented:
