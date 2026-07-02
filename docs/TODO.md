@@ -45,6 +45,20 @@ Still planned:
   confirm which files now fully hash and which still fail during frame decode.
 - Keep the current hash algorithm unchanged unless a real fallback decoder path
   is explicitly tested.
+- Add an optional structured problem log, for example
+  `--problem-log problems.jsonl`, that records files with notable media issues
+  seen during scan/import even when hashing eventually succeeds. This should be
+  a side-channel for diagnostics and future `vidcheck` input, not a change to
+  duplicate-search behavior.
+
+Problem-log candidate signals:
+
+- metadata recovered through fallback instead of the normal reader path;
+- missing or suspicious fps/duration values;
+- audio-only/non-video inputs skipped by `VideoHashSkip`;
+- decode errors, corrupt frames, or files that only hash after fallback logic;
+- unusually slow metadata probe or header read;
+- extension/container mismatch that may be worth checking later.
 
 ## KNN backend expansion
 
@@ -122,9 +136,14 @@ Keep this separate from duplicate search. `dupfind` should keep hashing and
 search behavior predictable; repair operations should be explicit and write to
 new files first.
 
-Seed registry:
+Historical seed registry:
 
 - `docs/PROBLEM_MEDIA.md`
+
+This registry is useful as a remembered test set, but it should not be treated
+as the main source of truth because many original import failures are now
+handled by `dupfind` fallbacks. The future media-check tool should scan paths
+directly and may optionally ingest `dupfind --problem-log` output as one input.
 
 Planned repair tool capabilities:
 
