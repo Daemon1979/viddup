@@ -83,6 +83,39 @@ Follow-up:
   native ImageIO v3 plugin. Do this only if frame iteration and metadata
   behavior can be verified against real files.
 
+## Extended duplicate information
+
+Planned CLI option:
+
+- `--dupinfo`
+
+Goal: add an optional extended report for duplicate groups without changing the
+default duplicate-search output.
+
+The report should estimate how likely each found duplicate pair/group is to be a
+full video-stream match versus only a repeated fragment inside different videos.
+
+Useful signals:
+
+- matched fragment start time in each file, for example one file starts around
+  `00:00:30` and another around `00:00:31`;
+- matched fragment duration or matched hash-run length;
+- total video duration comparison, with a small tolerance for trimmed starts or
+  ends;
+- resolution, container/codec metadata, and file size;
+- whether the matched fragment covers most of both videos.
+
+Likely classifications:
+
+- probable full video match: near-equal duration, near-equal duplicate start,
+  and the matched video sequence covers most of both files;
+- partial scene match: the same fragment appears at very different offsets, for
+  example one file around `00:10:00` and another around `00:30:00`;
+- uncertain: metadata or match coverage is insufficient.
+
+The exact output format should be chosen during implementation after checking
+real duplicate groups by eye.
+
 ## Media repair side tool
 
 Keep this separate from duplicate search. `dupfind` should keep hashing and
