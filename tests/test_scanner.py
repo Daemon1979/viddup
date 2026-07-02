@@ -12,11 +12,11 @@ def test_excluded_dir_matches_children(tmp_path: Path):
 
 
 def test_is_path_under_matches_exact_root_and_children_only(tmp_path: Path):
-    roots = normalize_excludes([str(tmp_path / "Games")])
+    roots = normalize_excludes([str(tmp_path / "SkipDir")])
 
-    assert is_path_under(str(tmp_path / "Games"), roots)
-    assert is_path_under(str(tmp_path / "Games" / "video.mp4"), roots)
-    assert not is_path_under(str(tmp_path / "Games_old" / "video.mp4"), roots)
+    assert is_path_under(str(tmp_path / "SkipDir"), roots)
+    assert is_path_under(str(tmp_path / "SkipDir" / "video.mp4"), roots)
+    assert not is_path_under(str(tmp_path / "SkipDir_old" / "video.mp4"), roots)
 
 
 def test_get_files_skips_excluded_dirs_and_typescript_declarations(tmp_path: Path):

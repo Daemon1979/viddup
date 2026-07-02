@@ -12,3 +12,9 @@ __pycache__/
 .ruff_cache/
 dist/
 *.egg-info/
+
+# Local/private media diagnostics. Keep public docs generic.
+docs/PROBLEM_MEDIA.md
+docs/*PROBLEM*.md
+problems*.jsonl
+problem-media*.md

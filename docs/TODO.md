@@ -2,11 +2,8 @@
 
 ## Import metadata fallback for old or unusual media
 
-The long `/PATH/video` update scan produced 29 `Failed to insert hashes`
-entries. The analysis is saved in:
-
-- `build/failed-hash-analysis.md`
-- `build/failed-hash-analysis.tsv`
+Large real-world media scans can produce `Failed to insert hashes` entries for
+old, unusual, audio-only, or corrupt files.
 
 Most failures were not obviously bad files. The main classes were:
 
@@ -32,17 +29,8 @@ Implemented:
 - Increased the ffmpeg metadata-header wait from 4 seconds to 30 seconds for
   large or slow-to-probe files.
 
-Validation so far:
-
-- Metadata-only recheck of the original 29 failures is saved in
-  `build/failed-hash-metadata-recheck.tsv`.
-- Result: 22 files have recovered metadata, 3 should hash and derive duration
-  from decoded frames, 4 are clean skips.
-
 Still planned:
 
-- Run a full re-import of the original failed-file list on a copied database to
-  confirm which files now fully hash and which still fail during frame decode.
 - Keep the current hash algorithm unchanged unless a real fallback decoder path
   is explicitly tested.
 - Add an optional structured problem log, for example
@@ -136,14 +124,8 @@ Keep this separate from duplicate search. `dupfind` should keep hashing and
 search behavior predictable; repair operations should be explicit and write to
 new files first.
 
-Historical seed registry:
-
-- `docs/PROBLEM_MEDIA.md`
-
-This registry is useful as a remembered test set, but it should not be treated
-as the main source of truth because many original import failures are now
-handled by `dupfind` fallbacks. The future media-check tool should scan paths
-directly and may optionally ingest `dupfind --problem-log` output as one input.
+The future media-check tool should scan paths directly and may optionally ingest
+`dupfind --problem-log` output as one input.
 
 Planned repair tool capabilities:
 

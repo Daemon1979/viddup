@@ -118,7 +118,7 @@ Skip directories during scan:
 ```sh
 dupfind --db videos.db --dir /PATH/video \
   --exclude-dir /PATH/video/skip-this-dir \
-  --exclude-dir /PATH/photos
+  --exclude-dir /PATH/other-media
 ```
 
 Search duplicates:

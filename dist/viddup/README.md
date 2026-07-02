@@ -7,6 +7,13 @@ This repository is the modern Python 3.12 port. The initial algorithm is kept
 compatible with the legacy tool while packaging, setup, scanning, and KNN
 backend handling are cleaned up.
 
+The original project this port was based on is
+[Eierkopp/viddup](https://github.com/Eierkopp/viddup.git).
+
+Most code changes in this port were made with Codex assistance. If that is a
+problem for your workflow, this repository may not be the right upstream for
+you.
+
 ## Quick setup
 
 Full installation instructions:
@@ -74,7 +81,7 @@ Skip noisy directories during scan:
 ```sh
 dupfind --db videos.db --dir /PATH/video \
   --exclude-dir /PATH/video/skip-this-dir \
-  --exclude-dir /PATH/photos
+  --exclude-dir /PATH/other-media
 ```
 
 Search duplicates:

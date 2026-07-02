@@ -117,7 +117,7 @@ dupfind --db videos.db --dir /PATH/video
 ```sh
 dupfind --db videos.db --dir /PATH/video \
   --exclude-dir /PATH/video/skip-this-dir \
-  --exclude-dir /PATH/photos
+  --exclude-dir /PATH/other-media
 ```
 
 Пошук дублікатів:
