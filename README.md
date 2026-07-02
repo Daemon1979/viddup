@@ -9,6 +9,11 @@ backend handling are cleaned up.
 
 ## Quick setup
 
+Full installation instructions:
+
+- English: [INSTALL.md](INSTALL.md)
+- Ukrainian: [INSTALL_UA.md](INSTALL_UA.md)
+
 Use Python 3.12. On FreeBSD, install both the concrete Python package and the
 `python3` meta-port/wrapper so `/usr/local/bin/python3` exists. The Python
 SQLite module is a separate package on FreeBSD and must be installed too.
