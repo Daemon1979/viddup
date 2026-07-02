@@ -64,6 +64,47 @@ def handle_purge(dbi, params, do_delete=None):
             logging.info(fi.name)
 
 
+def handle_list_db_files(dbi, params):
+    roots = [os.path.abspath(path) for path in params.list_db_path]
+    rows = []
+    for fileinfo in dbi.get_file_infos():
+        if roots and not any(fileinfo.name == root or fileinfo.name.startswith(root.rstrip("/") + os.sep) for root in roots):
+            continue
+        rows.append(fileinfo)
+
+    logging.info("DB files: %d", len(rows))
+    for fileinfo in rows:
+        logging.info("%s", fileinfo.name)
+
+
+def handle_list_db_dirs(dbi, params):
+    roots = [os.path.abspath(path) for path in params.list_db_path]
+    counts = {}
+    for fileinfo in dbi.get_file_infos():
+        if roots and not any(fileinfo.name == root or fileinfo.name.startswith(root.rstrip("/") + os.sep) for root in roots):
+            continue
+        directory = os.path.dirname(fileinfo.name)
+        counts[directory] = counts.get(directory, 0) + 1
+
+    logging.info("DB directories: %d", len(counts))
+    for directory, count in sorted(counts.items()):
+        logging.info("%6d %s", count, directory)
+
+
+def handle_delete_db_path(dbi, params):
+    for path in params.delete_db_path:
+        abspath = os.path.abspath(path)
+        files = dbi.get_file_infos_under_path(abspath)
+        logging.warning("DB path %s matches %d files", abspath, len(files))
+        for fileinfo in files:
+            logging.info("%s", fileinfo.name)
+        if params.delete:
+            deleted = dbi.del_files_under_path(abspath)
+            logging.warning("Deleted %d DB entries under %s", len(deleted), abspath)
+        else:
+            logging.warning("Dry run only; pass --delete to remove these DB entries")
+
+
 def whitelist(dbi, params, files=None):
     Entry = namedtuple("Entry", "name, fid")
 
@@ -151,6 +192,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--nice", type=int, help="Nice level for background operation, default 5", default=5)
     parser.add_argument("--dir", help="Import video hashes from directory and its subdirectories")
     parser.add_argument("--exclude-dir", action="append", default=[], help="Skip this directory during --dir scan; can be passed more than once")
+    parser.add_argument("--search-exclude-dir", action="append", default=[], help="Skip this already-hashed directory during --search; can be passed more than once")
     parser.add_argument("--file", help="Import video hashes for a single file")
     parser.add_argument("--refresh", action="store_true", help="Re-hash file but keep whitelistings intact", default=False)
     parser.add_argument("--search", action="store_true", help="Search duplicates in database")
@@ -164,6 +206,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--searchres", help="Filename of search result, used in --search and --ui without --search")
     parser.add_argument("--step", type=int, default=1, help="Step width for searching index, default 1")
     parser.add_argument("--whitelist", nargs="+", help="Whitelist a list of files")
+    parser.add_argument("--list-db-files", action="store_true", help="List hashed file paths stored in the database")
+    parser.add_argument("--list-db-dirs", action="store_true", help="List directories represented in the database with file counts")
+    parser.add_argument("--list-db-path", action="append", default=[], help="Limit --list-db-files/--list-db-dirs to this path prefix; can be repeated")
+    parser.add_argument("--delete-db-path", action="append", default=[], help="Delete DB entries under this path prefix; dry-run unless --delete is also passed")
     parser.add_argument("--knnlib", help="KNN library to use")
     parser.add_argument("--vidext", default=KNOWN_VID_TYPES_DEFAULT, help=f"filename extensions to consider, default {KNOWN_VID_TYPES_DEFAULT}")
     parser.add_argument("--fixduration", default=False, action="store_true", help=argparse.SUPPRESS)
@@ -179,15 +225,16 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     params = parser.parse_args(argv)
 
-    available = available_backends()
-    if not available:
-        logging.error("Please install at least one KNN library: hnswlib, cyflann, or annoy")
-        return 1
-    if params.knnlib is None:
-        params.knnlib = default_backend_name()
-    if params.knnlib not in available:
-        logging.error("Unsupported or unavailable KNN library %s; available: %s", params.knnlib, ", ".join(available))
-        return 1
+    if params.search:
+        available = available_backends()
+        if not available:
+            logging.error("Please install at least one KNN library: hnswlib, cyflann, or annoy")
+            return 1
+        if params.knnlib is None:
+            params.knnlib = default_backend_name()
+        if params.knnlib not in available:
+            logging.error("Unsupported or unavailable KNN library %s; available: %s", params.knnlib, ", ".join(available))
+            return 1
 
     try:
         nl = os.nice(0)
@@ -213,6 +260,15 @@ def main(argv: list[str] | None = None) -> int:
 
     if params.whitelist:
         whitelist(dbi, params)
+
+    if params.list_db_files:
+        handle_list_db_files(dbi, params)
+
+    if params.list_db_dirs:
+        handle_list_db_dirs(dbi, params)
+
+    if params.delete_db_path:
+        handle_delete_db_path(dbi, params)
 
     if params.purge:
         dbi.tidy_db()

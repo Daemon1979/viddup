@@ -4,6 +4,7 @@ from itertools import combinations
 from tqdm import tqdm
 
 from .knn import create_backend
+from .scanner import is_path_under, normalize_excludes
 from .utils import format_duration
 
 
@@ -84,10 +85,13 @@ class Index:
         scene_seconds = self.params.scenelength
         ignore_start = self.params.ignore_start
         ignore_end = self.params.ignore_end
+        search_excludes = normalize_excludes(self.params.search_exclude_dir)
 
         debug_item_no = 0
         with tqdm(self.dbi.get_file_infos()) as progress_bar:
             for fileinfo in progress_bar:
+                if is_path_under(fileinfo.name, search_excludes):
+                    continue
                 min_frame = int(ignore_start * fileinfo.fps)
                 max_frame = int((fileinfo.duration - ignore_end) * fileinfo.fps)
 

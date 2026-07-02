@@ -67,6 +67,26 @@ Search duplicates:
 dupfind --db videos.db --search
 ```
 
+Search while ignoring already-hashed directories:
+
+```sh
+dupfind --db videos.db --search --search-exclude-dir /PATH/video/skip-this-dir
+```
+
+Inspect database contents:
+
+```sh
+dupfind --db videos.db --list-db-dirs
+dupfind --db videos.db --list-db-files --list-db-path /PATH/video/skip-this-dir
+```
+
+Remove database entries under a path. Without `--delete` this is a dry run:
+
+```sh
+dupfind --db videos.db --delete-db-path /PATH/video/skip-this-dir
+dupfind --db videos.db --delete-db-path /PATH/video/skip-this-dir --delete
+```
+
 Purge DB entries whose files no longer exist:
 
 ```sh

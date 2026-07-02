@@ -41,6 +41,21 @@ class DB(DBBase):
             c.execute("delete from whitelist where id1 = ? or id2 = ?", [fid, fid])
         self.conn.commit()
 
+    def get_file_infos_under_path(self, path):
+        prefix = path.rstrip("/") + "/"
+        with self.cursor() as c:
+            c.execute(
+                "select id, name, fps, duration from filenames where name = ? or name like ? order by name asc",
+                [path, prefix + "%"],
+            )
+            return [FileInfo._make(i) for i in c.fetchall()]
+
+    def del_files_under_path(self, path):
+        files = self.get_file_infos_under_path(path)
+        for fileinfo in files:
+            self.del_file(fileinfo.fid)
+        return files
+
     def insert_brightness(self, fid, brightness):
         with self.cursor() as c:
             c.execute(self.s["DELETE_BRIGHTNESS"], [fid])

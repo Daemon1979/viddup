@@ -12,7 +12,12 @@ def normalize_excludes(paths: Iterable[str] | None) -> tuple[str, ...]:
 
 def is_excluded_dir(path: str, excludes: tuple[str, ...]) -> bool:
     abspath = os.path.abspath(path)
-    return any(abspath == excluded or abspath.startswith(excluded + os.sep) for excluded in excludes)
+    return is_path_under(abspath, excludes)
+
+
+def is_path_under(path: str, roots: tuple[str, ...]) -> bool:
+    abspath = os.path.abspath(path)
+    return any(abspath == root or abspath.startswith(root + os.sep) for root in roots)
 
 
 def get_files(basedir: str, vid_ext: set[str], exclude_dirs: Iterable[str] | None = None) -> Iterator[str]:

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from viddup.scanner import get_files, is_excluded_dir, normalize_excludes
+from viddup.scanner import get_files, is_excluded_dir, is_path_under, normalize_excludes
 
 
 def test_excluded_dir_matches_children(tmp_path: Path):
@@ -9,6 +9,14 @@ def test_excluded_dir_matches_children(tmp_path: Path):
     assert is_excluded_dir(str(tmp_path / "skip"), excluded)
     assert is_excluded_dir(str(tmp_path / "skip" / "nested"), excluded)
     assert not is_excluded_dir(str(tmp_path / "skip_other"), excluded)
+
+
+def test_is_path_under_matches_exact_root_and_children_only(tmp_path: Path):
+    roots = normalize_excludes([str(tmp_path / "Games")])
+
+    assert is_path_under(str(tmp_path / "Games"), roots)
+    assert is_path_under(str(tmp_path / "Games" / "video.mp4"), roots)
+    assert not is_path_under(str(tmp_path / "Games_old" / "video.mp4"), roots)
 
 
 def test_get_files_skips_excluded_dirs_and_typescript_declarations(tmp_path: Path):

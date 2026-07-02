@@ -105,6 +105,12 @@ Implemented:
 
 - repeatable `--exclude-dir`.
 - `.d.ts` skip to avoid TypeScript declaration files matching `.ts`.
+- repeatable `--search-exclude-dir` to ignore already-hashed directories during
+  duplicate search without deleting them from the database.
+- database inspection with `--list-db-files`, `--list-db-dirs`, and
+  `--list-db-path`.
+- database path removal with `--delete-db-path`, dry-run by default and
+  destructive only with `--delete`.
 
 Potential follow-ups:
 
