@@ -89,7 +89,23 @@ python -m pytest -q
 The KNN list should include at least one backend. Preferably it includes
 `hnswlib`.
 
-## 5. Common commands
+## 5. Optional wrapper
+
+After the venv is created and `viddup` is installed, you can use the included
+wrapper instead of activating the venv manually each time:
+
+```sh
+./dupfind.sh --help
+./dupfind.sh --db videos.db --search
+```
+
+By default, the wrapper uses `.venv` next to the script. To use another venv:
+
+```sh
+VIDDUP_VENV=/path/to/venv ./dupfind.sh --help
+```
+
+## 6. Common commands
 
 Create or update a database:
 
@@ -151,7 +167,7 @@ dupfind --db videos.db --purge
 dupfind --db videos.db --purge --delete
 ```
 
-## 6. Backend notes
+## 7. Backend notes
 
 Default backend priority:
 
@@ -170,7 +186,7 @@ Practical recommendation:
 - Use `sklearn` and `faiss` mainly for debugging or benchmark comparison. Their
   exact radius mode is very slow on large databases.
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 Missing SQLite module:
 

@@ -87,7 +87,24 @@ python -m pytest -q
 
 У списку KNN має бути хоча б один backend. Найкраще, якщо там є `hnswlib`.
 
-## 5. Типові команди
+## 5. Опціональний wrapper
+
+Після створення venv і встановлення `viddup` можна користуватись wrapper-ом і
+не активувати venv вручну кожного разу:
+
+```sh
+./dupfind.sh --help
+./dupfind.sh --db videos.db --search
+```
+
+За замовчуванням wrapper використовує `.venv` поруч зі скриптом. Якщо треба
+вказати інший venv:
+
+```sh
+VIDDUP_VENV=/path/to/venv ./dupfind.sh --help
+```
+
+## 6. Типові команди
 
 Створити або оновити базу:
 
@@ -149,7 +166,7 @@ dupfind --db videos.db --purge
 dupfind --db videos.db --purge --delete
 ```
 
-## 6. Примітки про backend-и
+## 7. Примітки про backend-и
 
 Дефолтний порядок вибору:
 
@@ -169,7 +186,7 @@ dupfind --db videos.db --purge --delete
 - `sklearn` і `faiss` краще лишити для debug або benchmark. Їх точний radius
   mode дуже повільний на великих базах.
 
-## 7. Типові проблеми
+## 8. Типові проблеми
 
 Нема SQLite-модуля:
 
