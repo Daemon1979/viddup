@@ -17,12 +17,32 @@ Most failures were not obviously bad files. The main classes were:
 - genuinely corrupt/tiny files.
 - one old interlaced WMV3 file that ffmpeg cannot decode.
 
-Planned fix:
+Implemented:
 
-- Add an `ffprobe -of json` metadata fallback before hashing.
-- Skip audio-only files with a clear warning instead of traceback noise.
-- Reject `fps <= 0` before `argrelmax` and either recover from ffprobe frame
-  rate or skip with a clear reason.
+- Added an `ffprobe -of json` metadata fallback for missing duration/fps.
+- Added clean `VideoHashSkip` handling so audio-only/corrupt files are logged
+  without traceback noise.
+- Reject `fps <= 0` before `argrelmax`; recover via ffprobe when possible and
+  use a conservative 25 fps fallback when ffmpeg reports only unusable timebase
+  values such as `1000/1` or `90000/1`.
+- If duration is missing but frames can be decoded and fps is known, compute
+  duration from decoded frame count.
+- Expanded the `VIDHASH` plugin extension gate to include `.asf`, `.flv`, and
+  `.ts`.
+- Increased the ffmpeg metadata-header wait from 4 seconds to 30 seconds for
+  large or slow-to-probe files.
+
+Validation so far:
+
+- Metadata-only recheck of the original 29 failures is saved in
+  `build/failed-hash-metadata-recheck.tsv`.
+- Result: 22 files have recovered metadata, 3 should hash and derive duration
+  from decoded frames, 4 are clean skips.
+
+Still planned:
+
+- Run a full re-import of the original failed-file list on a copied database to
+  confirm which files now fully hash and which still fail during frame decode.
 - Keep the current hash algorithm unchanged unless a real fallback decoder path
   is explicitly tested.
 

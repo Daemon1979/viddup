@@ -1,7 +1,7 @@
 import logging
 import time
 
-from .hashing import get_hashes
+from .hashing import VideoHashSkip, get_hashes
 from .scanner import get_files
 from .utils import format_duration, parse_extensions
 
@@ -28,6 +28,8 @@ def import_file(dbi, params, fname: str) -> None:
         except KeyboardInterrupt:
             logging.warning("Aborted")
             raise
+        except VideoHashSkip as exc:
+            logging.warning("Skipped video %s: %s", fname, exc)
         except Exception:
             logging.warning("Failed to insert hashes for %s", fname, exc_info=True)
 

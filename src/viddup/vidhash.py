@@ -474,7 +474,7 @@ class VidHashFormat(Format):
             duration and nframes. """
 
             # Wait for the catcher to get the meta information
-            etime = time.time() + 4.0
+            etime = time.time() + 30.0
             while (not self._stderr_catcher.header) and time.time() < etime:
                 time.sleep(0.01)
 
@@ -937,5 +937,5 @@ def get_output_video_line(lines):
 
 
 # Register. You register an *instance* of a Format class.
-format = VidHashFormat('vidhash', 'Many video formats and cameras (via ffmpeg)', '.mov .avi .mpg .mpeg .mp4 .mkv .wmv', 'I')
+format = VidHashFormat('vidhash', 'Many video formats and cameras (via ffmpeg)', '.mov .avi .mpg .mpeg .mp4 .mkv .wmv .asf .flv .ts', 'I')
 formats.add_format(format)
