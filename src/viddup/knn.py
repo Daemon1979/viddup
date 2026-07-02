@@ -118,8 +118,8 @@ class HnswlibBackend(KNNBackend):
         return len(self.items)
 
     def neighbors_within(self, rownum: int, radius: float) -> list[int]:
-        elem_idx, elem_dists = self.idx.knn_query(self.items[rownum], k=20)
-        return [item for n, item in enumerate(elem_idx[0]) if elem_dists[0][n] < radius]
+        elem_idx, elem_dists = self.idx.knn_query(self.items[rownum], k=min(20, len(self.items)))
+        return [item for n, item in enumerate(elem_idx[0]) if elem_dists[0][n] < radius * radius]
 
     def row(self, rownum: int):
         return self.items[rownum]

@@ -17,3 +17,14 @@ def test_extra_backends_find_nearby_rows(name):
 
     assert {0, 1}.issubset(neighbors)
     assert 2 not in neighbors
+
+
+def test_hnswlib_radius_uses_euclidean_units():
+    pytest.importorskip("hnswlib")
+    backend = create_backend("hnswlib", index_length=2)
+    backend.build([[0.0, 0.0], [0.0, 2.0], [5.0, 5.0]])
+
+    neighbors = set(backend.neighbors_within(0, radius=3.0))
+
+    assert {0, 1}.issubset(neighbors)
+    assert 2 not in neighbors

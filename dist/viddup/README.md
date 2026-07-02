@@ -31,8 +31,8 @@ python -m pip install -e ".[test]"
 The project may use system packages for heavy dependencies such as `scipy`,
 `scikit-learn`, `faiss`, `pynndescent`, `hnswlib`, or `annoy`.
 
-At least one KNN backend must be importable. The legacy priority is preserved
-for automatic backend selection:
+At least one KNN backend must be importable. `hnswlib` is the preferred default
+backend:
 
 1. `hnswlib`
 2. `cyflann`

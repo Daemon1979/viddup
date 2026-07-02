@@ -62,9 +62,12 @@ Implemented explicit backends:
 
 Follow-up:
 
-- Compare search output and runtime across `hnswlib`, `annoy`, `sklearn`,
-  `faiss`, and `pynndescent` on copied real databases.
-- Do not change the default priority until that comparison is complete.
+- Real DB benchmark on 2026-07-02 showed that corrected `hnswlib` radius
+  semantics match `sklearn`, `faiss`, `annoy`, and `pynndescent` output while
+  remaining the fastest backend in this environment.
+- Optional future benchmark: add an explicit top-k search mode for exact
+  backends (`sklearn`, `faiss`) to compare them against the practical
+  top-20-plus-radius behavior used by `hnswlib`, `annoy`, and `pynndescent`.
 
 ## ImageIO plugin migration
 
