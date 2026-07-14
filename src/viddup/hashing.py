@@ -109,7 +109,7 @@ def fix_duration(vidname: str) -> None:
         logging.warning("target %s is not writable, giving up", vidname)
 
 
-def get_hashes(vidname: str, fix: bool = True):
+def get_hashes(vidname: str, fix: bool = True, show_progress: bool = True):
     probe = probe_metadata(vidname)
     if probe.error == FFPROBE_NOT_FOUND:
         logging.warning("ffprobe not found; falling back to imageio-only metadata path")
@@ -132,7 +132,7 @@ def get_hashes(vidname: str, fix: bool = True):
     if ("duration" not in md or md["duration"] > 3 * 3600) and fix:
         fix_duration(vidname)
         logging.info("Duration of %s hopefully fixed", vidname)
-        return get_hashes(vidname, False)
+        return get_hashes(vidname, False, show_progress)
     if "duration" not in md or fps <= 0:
         if probe is None:
             probe = probe_metadata(vidname)
@@ -156,7 +156,7 @@ def get_hashes(vidname: str, fix: bool = True):
 
     brightness = []
     try:
-        with tqdm(video.iter_data(), total=nframes, leave=False) as pb:
+        with tqdm(video.iter_data(), total=nframes, leave=False, disable=not show_progress) as pb:
             for frame in pb:
                 brightness.append(frame.mean())
     except KeyboardInterrupt:

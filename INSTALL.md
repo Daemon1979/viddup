@@ -57,7 +57,7 @@ python -m pip install -U pip
 For normal use:
 
 ```sh
-python -m pip install -e .
+python -m pip install .
 ```
 
 For development and local tests:
@@ -112,6 +112,17 @@ Create or update a database:
 ```sh
 dupfind --db videos.db --dir /PATH/video
 ```
+
+Directory imports use up to four parallel hashing processes by default while
+keeping SQLite writes serialized and atomic. Tune concurrency for the machine
+and storage with `--numjobs`:
+
+```sh
+dupfind --db videos.db --dir /PATH/video --numjobs 6
+```
+
+Use fewer workers for an HDD or network share if parallel reads reduce
+throughput.
 
 Skip directories during scan:
 

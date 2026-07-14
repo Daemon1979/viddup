@@ -76,6 +76,32 @@ Import/update hashes:
 dupfind --db videos.db --dir /PATH/video
 ```
 
+Directory imports hash several videos in parallel. By default, `dupfind` uses
+the smaller of four workers or the detected CPU thread count minus two, with a
+minimum of one. Override this for the storage and CPU available on the machine:
+
+```sh
+dupfind --db videos.db --dir /PATH/video --numjobs 6
+```
+
+Local SSD storage can usually sustain more workers than an HDD or a network
+share. Database writes remain serialized and each video's filename, hashes,
+and brightness data are committed atomically.
+
+Build a portable source archive from the current working tree:
+
+```sh
+./makedist.sh
+```
+
+This creates `dist/viddup-dev.tar.gz`. To package an exact Git commit instead:
+
+```sh
+./makedist.sh COMMIT
+```
+
+The committed archive is named `dist/viddup-<short-hash>.tar.gz`.
+
 Skip noisy directories during scan:
 
 ```sh

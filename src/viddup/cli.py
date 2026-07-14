@@ -13,7 +13,7 @@ import yaml
 from tqdm import tqdm
 
 from . import FileInfo  # noqa: F401  FileInfo needed by yaml Loader
-from .importer import handle_import
+from .importer import default_num_jobs, handle_import
 from .knn import BACKENDS, available_backends, default_backend_name
 from .scanner import get_files
 from .search import handle_search
@@ -191,6 +191,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--vacuum", default=False, action="store_true", help="Do vacuum on db")
     parser.add_argument("--nice", type=int, help="Nice level for background operation, default 5", default=5)
     parser.add_argument("--dir", help="Import video hashes from directory and its subdirectories")
+    parser.add_argument(
+        "--numjobs",
+        type=int,
+        default=default_num_jobs(),
+        help="Parallel video hashing processes for --dir, default %(default)s",
+    )
     parser.add_argument("--exclude-dir", action="append", default=[], help="Skip this directory during --dir scan; can be passed more than once")
     parser.add_argument("--search-exclude-dir", action="append", default=[], help="Skip this already-hashed directory during --search; can be passed more than once")
     parser.add_argument("--file", help="Import video hashes for a single file")
@@ -224,6 +230,9 @@ def main(argv: list[str] | None = None) -> int:
     configure_logging()
     parser = build_parser()
     params = parser.parse_args(argv)
+
+    if params.numjobs < 1:
+        parser.error("--numjobs must be at least 1")
 
     if params.search:
         available = available_backends()

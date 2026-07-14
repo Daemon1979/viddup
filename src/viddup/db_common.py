@@ -51,7 +51,8 @@ class DBBase:
     def transaction(self):
         try:
             yield self.conn
-        except Exception:
+            self.commit()
+        except BaseException:
             self.rollback()
             raise
 
