@@ -7,6 +7,10 @@ Version 1.1 changes the default fingerprint length from 10 to 12 for cleaner
 search results and adds optional normalized brightness verification for KNN
 candidates via `--verify-brightness`.
 
+Version 1.2 adds layered TOML configuration through `viddup.conf`, independent
+import/search settings, and reusable `balanced`, `precise`, and `sensitive`
+search profiles.
+
 This repository is the modern Python 3.12 port. The initial algorithm is kept
 compatible with the legacy tool while packaging, setup, scanning, and KNN
 backend handling are cleaned up.
@@ -157,6 +161,36 @@ dupfind --db videos.db --search --verify-brightness \
 Normalization makes the check tolerant of global brightness changes, HDR/SDR,
 resolution, and codec differences. Raising the threshold produces cleaner
 results but may reject heavily edited or differently mastered copies.
+
+## Configuration
+
+Configuration files use TOML syntax with the traditional name `viddup.conf`.
+They are loaded in this order, with later files taking precedence:
+
+1. `~/.config/viddup/viddup.conf`
+2. `./viddup.conf`
+3. `--config /PATH/viddup.conf`
+
+Command-line options override all configuration files. Start from
+`viddup.conf.example`. Import and search exclusions are intentionally separate:
+
+```toml
+[import]
+exclude_dirs = ["/PATH/video/Games"]
+
+[search]
+profile = "precise"
+exclude_dirs = ["/PATH/video/Credits"]
+```
+
+Built-in profiles are `balanced`, `precise`, and `sensitive`:
+
+```sh
+dupfind --db videos.db --search --profile precise
+```
+
+Sections unrelated to the current operation are ignored. Unknown keys are
+reported only when their section is active.
 
 Search while ignoring already-hashed directories:
 

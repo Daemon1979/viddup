@@ -174,6 +174,22 @@ This stage does not decode media again. It tolerates global brightness, codec,
 resolution, and HDR/SDR differences by comparing normalized profile shapes.
 Higher values reduce false positives but can reject more heavily edited copies.
 
+### Configuration file
+
+`viddup` reads TOML configuration from `~/.config/viddup/viddup.conf`, then
+`./viddup.conf`, and finally a path passed with `--config`. Later files and then
+CLI arguments override earlier values. See `viddup.conf.example`.
+
+Use `[import]` for import-only options and `[search]` for search-only options.
+Their `exclude_dirs` arrays are independent. Inactive sections are ignored, so
+one configuration can safely contain settings for every operation.
+
+Select a built-in or custom search profile with:
+
+```sh
+dupfind --db videos.db --search --profile precise
+```
+
 Force a KNN backend:
 
 ```sh

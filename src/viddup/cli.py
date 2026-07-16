@@ -13,6 +13,7 @@ import yaml
 from tqdm import tqdm
 
 from . import FileInfo  # noqa: F401  FileInfo needed by yaml Loader
+from .config import ConfigError, load_config, resolve_defaults
 from .importer import default_num_jobs, handle_import
 from .knn import BACKENDS, available_backends, default_backend_name
 from .scanner import get_files
@@ -41,6 +42,16 @@ def configure_logging() -> None:
         format="%(asctime)-15s;%(levelname)s;%(message)s",
         stream=TqdmStream(sys.stdout),
     )
+
+
+def _explicit_repeated_values(argv: list[str], option: str) -> list[str]:
+    values = []
+    for index, argument in enumerate(argv):
+        if argument == option and index + 1 < len(argv):
+            values.append(argv[index + 1])
+        elif argument.startswith(option + "="):
+            values.append(argument.split("=", 1)[1])
+    return values
 
 
 def handle_purge(dbi, params, do_delete=None):
@@ -184,8 +195,11 @@ def fixfilenames(args):
             logging.info("changed into %s", new_fname)
 
 
-def build_parser() -> argparse.ArgumentParser:
+def build_parser(defaults: dict | None = None) -> argparse.ArgumentParser:
+    defaults = defaults or {}
     parser = argparse.ArgumentParser(prog="dupfind")
+    parser.add_argument("--config", help="TOML config file; also checks ~/.config/viddup/viddup.conf and ./viddup.conf")
+    parser.add_argument("--profile", default="balanced", help="Search profile, default %(default)s")
     parser.add_argument("--purge", default=False, action="store_true", help="Purge deleted files from database (dry run mode)")
     parser.add_argument("--delete", default=False, action="store_true", help="Really delete from database in purge")
     parser.add_argument("--vacuum", default=False, action="store_true", help="Do vacuum on db")
@@ -204,7 +218,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--search", action="store_true", help="Search duplicates in database")
     parser.add_argument("--ignore_start", type=int, default=0, help="Ignore search results starting in the first seconds of a movie, default 0")
     parser.add_argument("--ignore_end", type=int, default=0, help="Ignore search results starting in the last seconds of a movie, default 0")
-    parser.add_argument("--db", required=True, help="SQLite3 database file")
+    parser.add_argument("--db", required="db" not in defaults, help="SQLite3 database file")
     parser.add_argument(
         "--indexlength",
         default=12,
@@ -220,7 +234,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--verify-brightness",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
+        default=False,
         help="Verify KNN candidates using normalized frame-brightness correlation",
     )
     parser.add_argument(
@@ -244,14 +259,40 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--fixspeed", default=False, action="store_true", help="Make search more robust for time-scaled videos")
     parser.add_argument("--fixfilenames", default=False, action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--debug", default=False, action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument("--profile", default=False, action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--cpu-profile", default=False, action="store_true", help=argparse.SUPPRESS)
+    parser.set_defaults(**defaults)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     configure_logging()
-    parser = build_parser()
+    argv = list(argv) if argv is not None else sys.argv[1:]
+    bootstrap = argparse.ArgumentParser(add_help=False)
+    bootstrap.add_argument("--config")
+    bootstrap.add_argument("--profile")
+    bootstrap_args, _ = bootstrap.parse_known_args(argv)
+    try:
+        config, loaded_configs = load_config(bootstrap_args.config)
+        defaults, selected_profile = resolve_defaults(
+            config,
+            bootstrap_args.profile,
+            import_mode="--dir" in argv or "--file" in argv,
+            search_mode="--search" in argv,
+        )
+    except ConfigError as exc:
+        bootstrap.error(str(exc))
+
+    defaults["profile"] = selected_profile
+    parser = build_parser(defaults)
     params = parser.parse_args(argv)
+
+    if "--exclude-dir" in argv:
+        params.exclude_dir = _explicit_repeated_values(argv, "--exclude-dir")
+    if "--search-exclude-dir" in argv:
+        params.search_exclude_dir = _explicit_repeated_values(argv, "--search-exclude-dir")
+
+    for path in loaded_configs:
+        logging.info("Loaded config %s", path)
 
     if params.numjobs < 1:
         parser.error("--numjobs must be at least 1")
@@ -259,6 +300,15 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--brightness-correlation must be between -1 and 1")
 
     if params.search:
+        logging.info(
+            "Search configuration: profile=%s indexlength=%d radius=%.3f "
+            "verify_brightness=%s brightness_correlation=%.3f",
+            params.profile,
+            params.indexlength,
+            params.radius,
+            params.verify_brightness,
+            params.brightness_correlation,
+        )
         available = available_backends()
         if not available:
             logging.error("Please install at least one KNN library: %s", ", ".join(BACKENDS))
@@ -281,7 +331,7 @@ def main(argv: list[str] | None = None) -> int:
     dbi = DB(params)
 
     profile = None
-    if params.profile:
+    if params.cpu_profile:
         profile = cProfile.Profile()
         profile.enable()
 
