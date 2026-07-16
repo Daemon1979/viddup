@@ -1,170 +1,74 @@
 # TODO
 
-## TOML configuration and reusable search profiles
+This file contains only planned `viddup` work. Completed migrations, benchmark
+history, and media-repair work belonging to the separate `vidcheck` project are
+not tracked here.
 
-- Add optional `--config /PATH/viddup.toml` support.
-- Keep CLI arguments authoritative over values loaded from the file.
-- Allow named profiles such as `sensitive` and `precise` for combinations of
-  KNN backend, index length, radius, and brightness verification threshold.
-- Print the effective configuration at search start so saved profiles do not
-  make behavior opaque.
+## Structured media problem log
 
-## Import metadata fallback for old or unusual media
+Add an optional JSONL side-channel such as `--problem-log problems.jsonl` for
+files that show notable issues during import, including files that eventually
+hash successfully. It should not change duplicate-search behavior and should be
+usable as input for the separate `vidcheck` tool.
 
-Large real-world media scans can produce `Failed to insert hashes` entries for
-old, unusual, audio-only, or corrupt files.
+Candidate signals:
 
-Most failures were not obviously bad files. The main classes were:
-
-- `fps=0` from old WMV/ASF metadata, leading to `argrelmax(order=0)`.
-- missing `duration` in imageio/ffmpeg metadata.
-- `VIDHASH` rejecting some readable FLV/ASF inputs by extension or format gate.
-- audio-only `.mp4` files with no video stream.
-- genuinely corrupt/tiny files.
-- one old interlaced WMV3 file that ffmpeg cannot decode.
-
-Implemented:
-
-- Added an `ffprobe -of json` metadata fallback for missing duration/fps.
-- Added clean `VideoHashSkip` handling so audio-only/corrupt files are logged
-  without traceback noise.
-- Reject `fps <= 0` before `argrelmax`; recover via ffprobe when possible and
-  use a conservative 25 fps fallback when ffmpeg reports only unusable timebase
-  values such as `1000/1` or `90000/1`.
-- If duration is missing but frames can be decoded and fps is known, compute
-  duration from decoded frame count.
-- Expanded the `VIDHASH` plugin extension gate to include `.asf`, `.flv`, and
-  `.ts`.
-- Increased the ffmpeg metadata-header wait from 4 seconds to 30 seconds for
-  large or slow-to-probe files.
-
-Still planned:
-
-- Keep the current hash algorithm unchanged unless a real fallback decoder path
-  is explicitly tested.
-- Add an optional structured problem log, for example
-  `--problem-log problems.jsonl`, that records files with notable media issues
-  seen during scan/import even when hashing eventually succeeds. This should be
-  a side-channel for diagnostics and future `vidcheck` input, not a change to
-  duplicate-search behavior.
-
-Problem-log candidate signals:
-
-- metadata recovered through fallback instead of the normal reader path;
-- missing or suspicious fps/duration values;
-- audio-only/non-video inputs skipped by `VideoHashSkip`;
-- decode errors, corrupt frames, or files that only hash after fallback logic;
-- unusually slow metadata probe or header read;
-- extension/container mismatch that may be worth checking later.
-
-## KNN backend expansion
-
-The default priority remains:
-
-1. `hnswlib`
-2. `cyflann`
-3. `annoy`
-
-Implemented explicit backends:
-
-- `sklearn.neighbors.NearestNeighbors` as an exact baseline.
-- `faiss` for larger vector sets and benchmark comparison.
-- `pynndescent` for approximate-neighbor comparison.
-
-Follow-up:
-
-- Real DB benchmark on 2026-07-02 showed that corrected `hnswlib` radius
-  semantics match `sklearn`, `faiss`, `annoy`, and `pynndescent` output while
-  remaining the fastest backend in this environment.
-- Optional future benchmark: add an explicit top-k search mode for exact
-  backends (`sklearn`, `faiss`) to compare them against the practical
-  top-20-plus-radius behavior used by `hnswlib`, `annoy`, and `pynndescent`.
-
-## ImageIO plugin migration
-
-The `VIDHASH` format registration was migrated away from ImageIO's deprecated
-`FormatManager.add_format` API on 2026-07-02. Tests now run without ImageIO
-deprecation warnings.
-
-Follow-up:
-
-- Keep the current copied ffmpeg-derived plugin while stabilizing the project
-  structure.
-- Later review whether the whole `VIDHASH` reader should be rewritten as a
-  native ImageIO v3 plugin. Do this only if frame iteration and metadata
-  behavior can be verified against real files.
+- metadata recovered through the ffprobe fallback;
+- missing, fallback, or suspicious fps/duration values;
+- audio-only or non-video inputs skipped by `VideoHashSkip`;
+- decode errors, corrupt frames, or incomplete frame reads;
+- unusually slow metadata probing;
+- extension/container mismatch when it can be detected cheaply.
 
 ## Extended duplicate information
 
-Planned CLI option:
-
-- `--dupinfo`
-
-Goal: add an optional extended report for duplicate groups without changing the
-default duplicate-search output.
-
-The report should estimate how likely each found duplicate pair/group is to be a
-full video-stream match versus only a repeated fragment inside different videos.
+Add an optional `--dupinfo` report without changing the default output. It
+should help distinguish a probable full-video duplicate from a repeated scene,
+intro, or credits sequence.
 
 Useful signals:
 
-- matched fragment start time in each file, for example one file starts around
-  `00:00:30` and another around `00:00:31`;
-- matched fragment duration or matched hash-run length;
-- total video duration comparison, with a small tolerance for trimmed starts or
-  ends;
-- resolution, container/codec metadata, and file size;
-- whether the matched fragment covers most of both videos.
+- exact matched start frame/time in each file;
+- matched run length and approximate coverage of each video;
+- total duration difference;
+- resolution, codec/container, and file size;
+- KNN distance and optional brightness correlation;
+- classification such as probable full match, partial scene, or uncertain.
 
-Likely classifications:
+Choose the final text/JSONL output format after evaluating real result groups.
 
-- probable full video match: near-equal duration, near-equal duplicate start,
-  and the matched video sequence covers most of both files;
-- partial scene match: the same fragment appears at very different offsets, for
-  example one file around `00:10:00` and another around `00:30:00`;
-- uncertain: metadata or match coverage is insufficient.
+## Brightness verification performance
 
-The exact output format should be chosen during implementation after checking
-real duplicate groups by eye.
+The optional brightness verifier is accurate on tested databases but adds
+noticeable runtime on large indexes.
 
-## Media repair side tool
+- Separate KNN candidate discovery from brightness verification so only unique
+  candidate windows are checked.
+- Avoid repeated JSON decoding and profile resampling while keeping memory use
+  bounded for very large databases.
+- Add optional reporting for rejected pairs and correlation scores for tuning.
+- Re-evaluate the default 0.70 threshold when more manually classified data is
+  available.
 
-Keep this separate from duplicate search. `dupfind` should keep hashing and
-search behavior predictable; repair operations should be explicit and write to
-new files first.
+## ImageIO v3 reader migration
 
-The future media-check tool should scan paths directly and may optionally ingest
-`dupfind --problem-log` output as one input.
+The copied `VIDHASH` plugin no longer uses ImageIO's deprecated registration
+API. A full native ImageIO v3 rewrite remains optional and should only be done
+after frame iteration, cropping, metadata, and failure behavior are compared on
+the real legacy-media corpus.
 
-Planned repair tool capabilities:
+## Scan filtering follow-ups
 
-- Read a list/registry of problematic media files with path, ffprobe metadata,
-  original failure class, and suggested handling.
-- Classify files into:
-  - audio-only/non-video: move/exclude/rename, no video repair.
-  - tiny/truncated/corrupt: verify source or restore from backup.
-  - container/metadata issue: try remux to a new file with `ffmpeg -i input -c copy output`.
-  - codec/decoder issue: optionally transcode to a modern container/codecs.
-- Always write repaired output to a separate path first.
-- Run `ffprobe` before and after repair and save a report.
-- Never replace/delete originals without an explicit destructive flag.
-- Optionally generate shell commands first in dry-run mode.
+- Add repeatable `--exclude-name` for matching directory names anywhere below
+  the scan root, for example `.git`, `node_modules`, and cache directories.
+- Consider a clearer `--include-ext` alias for `--vidext`.
+- Improve `.ts` classification so MPEG transport streams are accepted while
+  TypeScript and unrelated project files remain excluded.
 
-## Scan filtering
+## Optional KNN research
 
-Implemented:
-
-- repeatable `--exclude-dir`.
-- `.d.ts` skip to avoid TypeScript declaration files matching `.ts`.
-- repeatable `--search-exclude-dir` to ignore already-hashed directories during
-  duplicate search without deleting them from the database.
-- database inspection with `--list-db-files`, `--list-db-dirs`, and
-  `--list-db-path`.
-- database path removal with `--delete-db-path`, dry-run by default and
-  destructive only with `--delete`.
-
-Potential follow-ups:
-
-- `--exclude-name` for names such as `node_modules`, `.git`, cache directories.
-- cleaner `--include-ext` alias for `--vidext`.
-- better `.ts` handling for transport streams versus non-video project files.
+- Keep `hnswlib` as the default; existing exact and approximate backends remain
+  useful for comparison.
+- If needed, add an explicit top-k mode for exact backends (`sklearn`, `faiss`)
+  to compare with the practical top-20-plus-radius behavior of approximate
+  backends.

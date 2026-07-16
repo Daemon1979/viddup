@@ -1,0 +1,30 @@
+# This is TOML syntax despite the traditional .conf filename.
+
+[common]
+db = "videos.db"
+nice = 5
+
+[import]
+numjobs = 4
+exclude_dirs = [
+  "/PATH/video/Games",
+  "/PATH/video/Photos",
+]
+
+[search]
+profile = "balanced"
+exclude_dirs = [
+  "/PATH/video/IgnoreDuringDuplicateSearch",
+]
+
+# Built-in profiles can be adjusted, and new profiles can be added.
+[profiles.precise]
+indexlength = 12
+radius = 3.0
+verify_brightness = true
+brightness_correlation = 0.70
+
+[profiles.sensitive]
+indexlength = 10
+radius = 3.0
+verify_brightness = false
