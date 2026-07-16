@@ -138,6 +138,26 @@ Search duplicates:
 dupfind --db videos.db --search
 ```
 
+Because the fingerprint describes timing between brightness extrema, unrelated
+videos may occasionally produce false positives. If this happens frequently,
+try a longer fingerprint first:
+
+```sh
+dupfind --db videos.db --search --indexlength 12
+```
+
+For stricter matching, reduce the radius as a second step:
+
+```sh
+dupfind --db videos.db --search --indexlength 12 --radius 2
+```
+
+These options improve precision at the cost of sensitivity. Increasing
+`--indexlength` can hide short real matches; decreasing `--radius` can hide
+matches altered by frame-rate conversion, editing, or encoding. The defaults
+remain the safer choice when finding as many real duplicates as possible is
+more important than avoiding manual review.
+
 Force a KNN backend:
 
 ```sh

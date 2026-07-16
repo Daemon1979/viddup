@@ -205,9 +205,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--ignore_start", type=int, default=0, help="Ignore search results starting in the first seconds of a movie, default 0")
     parser.add_argument("--ignore_end", type=int, default=0, help="Ignore search results starting in the last seconds of a movie, default 0")
     parser.add_argument("--db", required=True, help="SQLite3 database file")
-    parser.add_argument("--indexlength", default=10, type=int, help="Length of index in searches, default 10")
+    parser.add_argument(
+        "--indexlength",
+        default=10,
+        type=int,
+        help="Fingerprint length; try 12 to reduce false positives, default 10",
+    )
     parser.add_argument("--scenelength", default=300, type=int, help="Length in seconds of scenes to match, default 300")
-    parser.add_argument("--radius", default=3.0, type=float, help="Measure for acceptable index difference, default 3.0")
+    parser.add_argument(
+        "--radius",
+        default=3.0,
+        type=float,
+        help="Maximum fingerprint distance; try 2 for stricter matching, default 3.0",
+    )
     parser.add_argument("--ui", action="store_true", help="Launch ui after search results")
     parser.add_argument("--searchres", help="Filename of search result, used in --search and --ui without --search")
     parser.add_argument("--step", type=int, default=1, help="Step width for searching index, default 1")
