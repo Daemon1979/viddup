@@ -116,6 +116,25 @@ Search duplicates:
 dupfind --db videos.db --search
 ```
 
+The fingerprint is based on timing between brightness extrema, so unrelated
+videos can occasionally have similar timing patterns. If search results contain
+many false positives, first require a longer matching fingerprint:
+
+```sh
+dupfind --db videos.db --search --indexlength 12
+```
+
+If that is still too permissive, also try a smaller search radius:
+
+```sh
+dupfind --db videos.db --search --indexlength 12 --radius 2
+```
+
+Both settings trade sensitivity for precision. A larger `--indexlength` can
+miss shorter real duplicates, while a smaller `--radius` can miss material
+changed by frame-rate conversion, editing, or encoding. Keep the defaults when
+recall matters more than manually rejecting occasional false positives.
+
 Search while ignoring already-hashed directories:
 
 ```sh
