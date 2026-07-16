@@ -138,25 +138,41 @@ Search duplicates:
 dupfind --db videos.db --search
 ```
 
-Because the fingerprint describes timing between brightness extrema, unrelated
-videos may occasionally produce false positives. If this happens frequently,
-try a longer fingerprint first:
+The default search uses fingerprint length 12 and radius 3. This provides a
+practical balance between useful matches and false positives:
 
 ```sh
-dupfind --db videos.db --search --indexlength 12
+dupfind --db videos.db --search
 ```
 
-For stricter matching, reduce the radius as a second step:
+For shorter or less similar matching fragments, select a more sensitive search:
 
 ```sh
-dupfind --db videos.db --search --indexlength 12 --radius 2
+dupfind --db videos.db --search --indexlength 11
+dupfind --db videos.db --search --indexlength 10
 ```
 
-These options improve precision at the cost of sensitivity. Increasing
-`--indexlength` can hide short real matches; decreasing `--radius` can hide
-matches altered by frame-rate conversion, editing, or encoding. The defaults
-remain the safer choice when finding as many real duplicates as possible is
-more important than avoiding manual review.
+Shorter fingerprints increase sensitivity and false positives. Reducing
+`--radius` below its default of 3 makes matching stricter, but can hide copies
+altered by frame-rate conversion, editing, or encoding.
+
+Optionally verify KNN candidates with normalized frame-brightness profiles that
+are already stored in the database:
+
+```sh
+dupfind --db videos.db --search --verify-brightness
+```
+
+The default minimum correlation is `0.70`. It can be changed explicitly:
+
+```sh
+dupfind --db videos.db --search --verify-brightness \
+  --brightness-correlation 0.80
+```
+
+This stage does not decode media again. It tolerates global brightness, codec,
+resolution, and HDR/SDR differences by comparing normalized profile shapes.
+Higher values reduce false positives but can reject more heavily edited copies.
 
 Force a KNN backend:
 

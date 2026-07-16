@@ -9,6 +9,7 @@ def mk_stmt(db_mod):
         "TIDY_FILENAMES": "delete from filenames where not exists (select 1 from hashes where filename_id = id limit 1)",
         "IS_WHITELISTED": "select 1 from whitelist where id1 = %% and id2 = %%",
         "GET_HASHES": "select frame, hash from hashes where filename_id = %% and frame >= %% and frame <= %% order by frame",
+        "GET_BRIGHTNESS": "select brightness from brightness where filename_id = %%",
         "INSERT_HASHES": "insert into hashes (filename_id, frame, hash) values (%%, %%, %%)",
         "DELETE_HASHES": "delete from hashes where filename_id = %%",
         "DELETE_BRIGHTNESS": "delete from brightness where filename_id = %%",
@@ -87,6 +88,12 @@ class DBBase:
         frames = [p[0] for p in result]
         hashes = [p[1] for p in result]
         return frames, hashes
+
+    def get_brightness(self, fid):
+        with self.cursor() as c:
+            c.execute(self.s["GET_BRIGHTNESS"], [fid])
+            result = c.fetchone()
+        return result[0] if result else None
 
     def is_whitelisted(self, id1, id2):
         if id1 > id2:

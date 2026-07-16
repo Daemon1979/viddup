@@ -207,9 +207,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--db", required=True, help="SQLite3 database file")
     parser.add_argument(
         "--indexlength",
-        default=10,
+        default=12,
         type=int,
-        help="Fingerprint length; try 12 to reduce false positives, default 10",
+        help="Fingerprint length; use 10 or 11 for shorter/more sensitive matches, default 12",
     )
     parser.add_argument("--scenelength", default=300, type=int, help="Length in seconds of scenes to match, default 300")
     parser.add_argument(
@@ -217,6 +217,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=3.0,
         type=float,
         help="Maximum fingerprint distance; try 2 for stricter matching, default 3.0",
+    )
+    parser.add_argument(
+        "--verify-brightness",
+        action="store_true",
+        help="Verify KNN candidates using normalized frame-brightness correlation",
+    )
+    parser.add_argument(
+        "--brightness-correlation",
+        type=float,
+        default=0.70,
+        metavar="VALUE",
+        help="Minimum correlation for --verify-brightness, default 0.70",
     )
     parser.add_argument("--ui", action="store_true", help="Launch ui after search results")
     parser.add_argument("--searchres", help="Filename of search result, used in --search and --ui without --search")
@@ -243,6 +255,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if params.numjobs < 1:
         parser.error("--numjobs must be at least 1")
+    if not -1.0 <= params.brightness_correlation <= 1.0:
+        parser.error("--brightness-correlation must be between -1 and 1")
 
     if params.search:
         available = available_backends()
