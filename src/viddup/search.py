@@ -1,11 +1,79 @@
 import logging
+from collections import OrderedDict
 from itertools import combinations
 
+import json
+import numpy as np
 from tqdm import tqdm
 
 from .knn import create_backend
 from .scanner import is_path_under, normalize_excludes
 from .utils import format_duration
+
+
+BRIGHTNESS_SAMPLES = 1000
+BRIGHTNESS_MAX_LAG_RATIO = 0.02
+BRIGHTNESS_CACHE_SIZE = 32
+
+
+def brightness_correlation(first, second, samples=BRIGHTNESS_SAMPLES, max_lag_ratio=BRIGHTNESS_MAX_LAG_RATIO):
+    """Compare brightness profile shapes independently of absolute brightness."""
+    first = np.asarray(first, dtype=float)
+    second = np.asarray(second, dtype=float)
+    if len(first) < 2 or len(second) < 2:
+        return 0.0
+
+    positions = np.linspace(0.0, 1.0, samples)
+    first = np.interp(positions, np.linspace(0.0, 1.0, len(first)), first)
+    second = np.interp(positions, np.linspace(0.0, 1.0, len(second)), second)
+
+    first_std = first.std()
+    second_std = second.std()
+    if first_std == 0 or second_std == 0:
+        return 0.0
+    first = (first - first.mean()) / first_std
+    second = (second - second.mean()) / second_std
+
+    max_lag = max(0, int(samples * max_lag_ratio))
+    best = -1.0
+    for lag in range(-max_lag, max_lag + 1):
+        if lag < 0:
+            left, right = first[:lag], second[-lag:]
+        elif lag > 0:
+            left, right = first[lag:], second[:-lag]
+        else:
+            left, right = first, second
+        score = float(np.corrcoef(left, right)[0, 1])
+        if np.isfinite(score):
+            best = max(best, score)
+    return best
+
+
+def connected_components(details, accepted_pairs):
+    """Return duplicate subgroups after rejected pair edges are removed."""
+    adjacency = {detail[0].fid: set() for detail in details}
+    by_fid = {detail[0].fid: detail for detail in details}
+    for first, second in accepted_pairs:
+        adjacency[first].add(second)
+        adjacency[second].add(first)
+
+    result = []
+    seen = set()
+    for fid in adjacency:
+        if fid in seen or not adjacency[fid]:
+            continue
+        stack = [fid]
+        component = []
+        while stack:
+            current = stack.pop()
+            if current in seen:
+                continue
+            seen.add(current)
+            component.append(by_fid[current])
+            stack.extend(adjacency[current] - seen)
+        if len(component) > 1:
+            result.append(component)
+    return result
 
 
 class Index:
@@ -27,6 +95,9 @@ class Index:
 
         known_duplicates = set()
         result = []
+        brightness_cache = OrderedDict()
+        brightness_checked = 0
+        brightness_rejected = 0
 
         for i in tqdm(range(0, data_length, step)):
             elem_idx = self.backend.neighbors_within(i, radius)
@@ -47,8 +118,6 @@ class Index:
                 if not fids:
                     continue
 
-                known_duplicates.update(set(pairs))
-
                 known_fids = set()
                 for item in elem_idx:
                     try:
@@ -59,14 +128,65 @@ class Index:
                         fileinfo, frame = self.fi_list[item], self.frame_list[item]
                         if debug:
                             logging.info("%4d, %-50s: %s", fileinfo.fid, fileinfo.name[-50:], self.backend.row(item))
-                        details.append([fileinfo, frame / fileinfo.fps])
+                        details.append([fileinfo, frame / fileinfo.fps, item])
                     except KeyboardInterrupt:
                         raise
                     except Exception:
                         logging.info("Error processing: %s, purge required?", item, exc_info=True)
                 if len(details) > 1:
-                    result.append(details)
+                    if self.params.verify_brightness:
+                        accepted_pairs = set()
+                        for first, second in combinations(details, 2):
+                            pair = tuple(sorted((first[0].fid, second[0].fid)))
+                            if pair not in pairs:
+                                continue
+                            score = self.brightness_score(first, second, brightness_cache)
+                            brightness_checked += 1
+                            if score >= self.params.brightness_correlation:
+                                accepted_pairs.add(pair)
+                                known_duplicates.add(pair)
+                            else:
+                                brightness_rejected += 1
+                                if debug:
+                                    logging.info(
+                                        "Brightness rejected %.4f < %.4f: %s <> %s",
+                                        score,
+                                        self.params.brightness_correlation,
+                                        first[0].name,
+                                        second[0].name,
+                                    )
+                        result.extend(connected_components(details, accepted_pairs))
+                    else:
+                        known_duplicates.update(set(pairs))
+                        result.append(details)
+        if self.params.verify_brightness:
+            logging.info(
+                "Brightness verification: %d candidate pairs checked, %d rejected below %.3f",
+                brightness_checked,
+                brightness_rejected,
+                self.params.brightness_correlation,
+            )
         return result
+
+    def brightness_score(self, first, second, cache):
+        first_profile = self.brightness_segment(first, cache)
+        second_profile = self.brightness_segment(second, cache)
+        return brightness_correlation(first_profile, second_profile)
+
+    def brightness_segment(self, detail, cache):
+        fileinfo, _, item = detail
+        if fileinfo.fid not in cache:
+            raw = self.dbi.get_brightness(fileinfo.fid)
+            cache[fileinfo.fid] = np.asarray(json.loads(raw), dtype=float) if raw else np.array([])
+            if len(cache) > BRIGHTNESS_CACHE_SIZE:
+                cache.popitem(last=False)
+        else:
+            cache.move_to_end(fileinfo.fid)
+        brightness = cache[fileinfo.fid]
+        start = self.frame_list[item]
+        duration = sum(value for value in self.backend.row(item) if value > 0)
+        end = min(len(brightness), start + max(1, round(duration * fileinfo.fps)))
+        return brightness[start:end]
 
     def is_whitelisted(self, ids):
         """Return True if all pairs of filenames are whitelisted."""
@@ -144,5 +264,5 @@ def handle_search(dbi, params):
 
     for match in duplicates:
         logging.info("Group of %d files found", len(match))
-        for fileinfo, offset in match:
+        for fileinfo, offset, *_ in match:
             logging.info("ffplay -ss %s '%s'", format_duration(offset), fileinfo.name)

@@ -3,6 +3,10 @@
 `viddup` detects duplicate video scenes by hashing brightness changes and
 searching similar hash windows in a SQLite database.
 
+Version 1.1 changes the default fingerprint length from 10 to 12 for cleaner
+search results and adds optional normalized brightness verification for KNN
+candidates via `--verify-brightness`.
+
 This repository is the modern Python 3.12 port. The initial algorithm is kept
 compatible with the legacy tool while packaging, setup, scanning, and KNN
 backend handling are cleaned up.
@@ -116,24 +120,43 @@ Search duplicates:
 dupfind --db videos.db --search
 ```
 
-The fingerprint is based on timing between brightness extrema, so unrelated
-videos can occasionally have similar timing patterns. If search results contain
-many false positives, first require a longer matching fingerprint:
+The default search uses a fingerprint length of 12 and radius 3. This was found
+to provide a good balance between useful matches and false positives on large
+real-world databases:
 
 ```sh
-dupfind --db videos.db --search --indexlength 12
+dupfind --db videos.db --search
 ```
 
-If that is still too permissive, also try a smaller search radius:
+Use a shorter fingerprint when finding shorter or less similar fragments is
+more important than minimizing manual review:
 
 ```sh
-dupfind --db videos.db --search --indexlength 12 --radius 2
+dupfind --db videos.db --search --indexlength 11
+dupfind --db videos.db --search --indexlength 10
 ```
 
-Both settings trade sensitivity for precision. A larger `--indexlength` can
-miss shorter real duplicates, while a smaller `--radius` can miss material
-changed by frame-rate conversion, editing, or encoding. Keep the defaults when
-recall matters more than manually rejecting occasional false positives.
+Lowering `--radius` below its default of 3 makes matching stricter, but can hide
+copies changed by frame-rate conversion, editing, or encoding.
+
+KNN candidates can also be verified against the normalized frame-brightness
+profiles already stored in the database. This does not decode videos again:
+
+```sh
+dupfind --db videos.db --search --verify-brightness
+```
+
+The default minimum correlation is `0.70`. Override it when evaluating a media
+collection:
+
+```sh
+dupfind --db videos.db --search --verify-brightness \
+  --brightness-correlation 0.80
+```
+
+Normalization makes the check tolerant of global brightness changes, HDR/SDR,
+resolution, and codec differences. Raising the threshold produces cleaner
+results but may reject heavily edited or differently mastered copies.
 
 Search while ignoring already-hashed directories:
 

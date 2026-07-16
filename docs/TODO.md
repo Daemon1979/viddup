@@ -1,5 +1,14 @@
 # TODO
 
+## TOML configuration and reusable search profiles
+
+- Add optional `--config /PATH/viddup.toml` support.
+- Keep CLI arguments authoritative over values loaded from the file.
+- Allow named profiles such as `sensitive` and `precise` for combinations of
+  KNN backend, index length, radius, and brightness verification threshold.
+- Print the effective configuration at search start so saved profiles do not
+  make behavior opaque.
+
 ## Import metadata fallback for old or unusual media
 
 Large real-world media scans can produce `Failed to insert hashes` entries for
