@@ -10,6 +10,16 @@ def test_get_extrema_returns_frame_and_delta_seconds():
     assert result == [(1, 1.0), (4, 3.0)]
 
 
+def test_get_extrema_accepts_flat_peaks_from_duplicated_frames():
+    result = get_extrema([0, 2, 2, 0, 0, 3, 3, 0], min_dist=1, fps=1)
+
+    assert result == [(1, 1.0), (5, 4.0)]
+
+
+def test_get_extrema_returns_no_hashes_for_constant_video():
+    assert get_extrema([10, 10, 10, 10], min_dist=1, fps=1) == []
+
+
 def test_get_extrema_skips_zero_fps():
     with pytest.raises(VideoHashSkip):
         get_extrema([0, 1, 0], min_dist=10, fps=0)

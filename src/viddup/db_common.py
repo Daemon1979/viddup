@@ -6,7 +6,6 @@ FileInfo = namedtuple("FileInfo", "fid, name, fps, duration")
 
 def mk_stmt(db_mod):
     statements = {
-        "TIDY_FILENAMES": "delete from filenames where not exists (select 1 from hashes where filename_id = id limit 1)",
         "IS_WHITELISTED": "select 1 from whitelist where id1 = %% and id2 = %%",
         "GET_HASHES": "select frame, hash from hashes where filename_id = %% and frame >= %% and frame <= %% order by frame",
         "GET_BRIGHTNESS": "select brightness from brightness where filename_id = %%",

@@ -7,7 +7,8 @@ import subprocess
 
 import imageio
 import numpy as np
-from scipy.signal import argrelmax
+from scipy.ndimage import maximum_filter1d
+from scipy.signal import find_peaks
 from tqdm import tqdm
 
 from . import vidhash  # noqa: F401  importing registers format with imageio
@@ -181,7 +182,16 @@ def get_extrema(hashes, min_dist: int, fps: float):
     order = int(min_dist * fps)
     if order < 1:
         raise VideoHashSkip(f"invalid fps for extrema extraction: {fps}")
-    idx = argrelmax(np.array(hashes), order=order)[0]
+    values = np.asarray(hashes)
+    if values.size < 3 or np.all(values == values[0]):
+        return []
+
+    # find_peaks selects the center of a flat peak. This matters for content
+    # encoded at 50/60 fps by duplicating every source frame: strict relative
+    # maxima reject both frames of every plateau and produce no hashes.
+    candidates, _ = find_peaks(values, plateau_size=1)
+    window_max = maximum_filter1d(values, size=2 * order + 1, mode="nearest")
+    idx = candidates[values[candidates] == window_max[candidates]]
     result = []
     old_idx = 0
     for i in idx:

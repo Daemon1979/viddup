@@ -26,3 +26,15 @@ def test_get_and_delete_files_under_path(tmp_path: Path):
     assert db.get_id(remove_two) is None
     assert db.get_id(keep) is not None
     assert db.get_id(not_remove) is not None
+
+
+def test_tidy_keeps_successful_file_without_extrema(tmp_path):
+    db = DB(SimpleNamespace(db=str(tmp_path / "videos.db")))
+    fileinfo = db.insert_file("/videos/static.mkv", 60.0, 30.0)
+    db.insert_brightness(fileinfo.fid, [42.0] * 10)
+    db.commit()
+
+    db.tidy_db()
+
+    assert db.get_id("/videos/static.mkv") == fileinfo.fid
+    assert db.get_brightness(fileinfo.fid) is not None

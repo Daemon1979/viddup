@@ -77,10 +77,9 @@ class DB(DBBase):
         self.conn.execute("vacuum")
 
     def tidy_db(self):
-        logging.info("Cleaning DB")
+        logging.info("Cleaning orphaned database rows")
         try:
             with self.cursor() as c:
-                c.execute(self.s["TIDY_FILENAMES"])
                 c.execute("delete from hashes where filename_id not in (select id from filenames)")
                 c.execute("delete from brightness where filename_id not in (select id from  filenames)")
                 c.execute("delete from whitelist where id1 not in (select id from filenames)")
