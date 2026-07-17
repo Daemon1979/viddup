@@ -38,3 +38,50 @@ def test_tidy_keeps_successful_file_without_extrema(tmp_path):
 
     assert db.get_id("/videos/static.mkv") == fileinfo.fid
     assert db.get_brightness(fileinfo.fid) is not None
+
+
+def test_new_database_defaults_to_legacy_hash_method(tmp_path):
+    db = DB(SimpleNamespace(db=str(tmp_path / "videos.db"), hash_method=None))
+
+    assert db.hash_method == "legacy-center"
+    assert db.hash_method_version == 1
+
+
+def test_new_database_records_requested_full_frame_method(tmp_path):
+    path = tmp_path / "videos.db"
+    db = DB(SimpleNamespace(db=str(path), hash_method="full-frame"))
+    db.conn.close()
+
+    reopened = DB(SimpleNamespace(db=str(path), hash_method=None))
+
+    assert reopened.hash_method == "full-frame"
+    with reopened.cursor() as cursor:
+        cursor.execute("select value from metadata where key = 'video_filter'")
+        assert cursor.fetchone()[0] == "scale=128:72:flags=fast_bilinear"
+
+
+def test_existing_legacy_database_without_metadata_is_marked_legacy(tmp_path):
+    path = tmp_path / "legacy.db"
+    import sqlite3
+
+    connection = sqlite3.connect(path)
+    connection.execute(
+        "create table filenames (id INTEGER PRIMARY KEY, name text, fps float, duration float)"
+    )
+    connection.commit()
+    connection.close()
+
+    db = DB(SimpleNamespace(db=str(path), hash_method=None))
+
+    assert db.hash_method == "legacy-center"
+
+
+def test_database_rejects_mixed_hash_methods(tmp_path):
+    path = tmp_path / "videos.db"
+    db = DB(SimpleNamespace(db=str(path), hash_method="full-frame"))
+    db.conn.close()
+
+    import pytest
+
+    with pytest.raises(ValueError, match="cannot be mixed"):
+        DB(SimpleNamespace(db=str(path), hash_method="legacy-center"))

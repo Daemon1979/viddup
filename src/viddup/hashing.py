@@ -12,6 +12,7 @@ from scipy.signal import find_peaks
 from tqdm import tqdm
 
 from . import vidhash  # noqa: F401  importing registers format with imageio
+from .hash_methods import get_hash_method
 from .settings import INDEX_DIST
 from .utils import format_duration
 
@@ -110,7 +111,12 @@ def fix_duration(vidname: str) -> None:
         logging.warning("target %s is not writable, giving up", vidname)
 
 
-def get_hashes(vidname: str, fix: bool = True, show_progress: bool = True):
+def get_hashes(
+    vidname: str,
+    fix: bool = True,
+    show_progress: bool = True,
+    hash_method: str = "legacy-center",
+):
     probe = probe_metadata(vidname)
     if probe.error == FFPROBE_NOT_FOUND:
         logging.warning("ffprobe not found; falling back to imageio-only metadata path")
@@ -120,7 +126,12 @@ def get_hashes(vidname: str, fix: bool = True, show_progress: bool = True):
         raise VideoHashSkip(reason)
 
     try:
-        video = imageio.get_reader(vidname, "vidhash")
+        method = get_hash_method(hash_method)
+        video = imageio.get_reader(
+            vidname,
+            "vidhash",
+            video_filter=method.video_filter,
+        )
     except Exception as exc:
         if probe is not None and not probe.has_video:
             reason = probe.error or "no video stream"
@@ -133,7 +144,7 @@ def get_hashes(vidname: str, fix: bool = True, show_progress: bool = True):
     if ("duration" not in md or md["duration"] > 3 * 3600) and fix:
         fix_duration(vidname)
         logging.info("Duration of %s hopefully fixed", vidname)
-        return get_hashes(vidname, False, show_progress)
+        return get_hashes(vidname, False, show_progress, hash_method)
     if "duration" not in md or fps <= 0:
         if probe is None:
             probe = probe_metadata(vidname)

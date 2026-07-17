@@ -76,6 +76,19 @@ def test_config_database_satisfies_required_cli_option():
     assert args.db == "configured.db"
 
 
+def test_import_hash_method_is_loaded_from_config():
+    config = {"import": {"hash_method": "full-frame"}}
+
+    defaults, _ = resolve_defaults(
+        config,
+        None,
+        import_mode=True,
+        search_mode=False,
+    )
+
+    assert defaults["hash_method"] == "full-frame"
+
+
 def test_cli_can_disable_brightness_from_precise_profile():
     defaults, _ = resolve_defaults({}, "precise", import_mode=False, search_mode=True)
     parser = build_parser(defaults)

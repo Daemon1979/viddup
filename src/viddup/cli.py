@@ -15,6 +15,7 @@ from tqdm import tqdm
 from . import FileInfo  # noqa: F401  FileInfo needed by yaml Loader
 from .config import ConfigError, load_config, resolve_defaults
 from .importer import default_num_jobs, handle_import
+from .hash_methods import HASH_METHODS
 from .knn import BACKENDS, available_backends, default_backend_name
 from .scanner import get_files
 from .search import handle_search
@@ -214,6 +215,11 @@ def build_parser(defaults: dict | None = None) -> argparse.ArgumentParser:
     parser.add_argument("--exclude-dir", action="append", default=[], help="Skip this directory during --dir scan; can be passed more than once")
     parser.add_argument("--search-exclude-dir", action="append", default=[], help="Skip this already-hashed directory during --search; can be passed more than once")
     parser.add_argument("--file", help="Import video hashes for a single file")
+    parser.add_argument(
+        "--hash-method",
+        choices=HASH_METHODS,
+        help="Hash extraction method for a new database; existing databases keep their recorded method",
+    )
     parser.add_argument("--refresh", action="store_true", help="Re-hash file but keep whitelistings intact", default=False)
     parser.add_argument("--search", action="store_true", help="Search duplicates in database")
     parser.add_argument("--ignore_start", type=int, default=0, help="Ignore search results starting in the first seconds of a movie, default 0")
@@ -328,7 +334,17 @@ def main(argv: list[str] | None = None) -> int:
 
     from .sqlite_db import DB
 
-    dbi = DB(params)
+    try:
+        dbi = DB(params)
+    except ValueError as exc:
+        parser.error(str(exc))
+
+    params.hash_method = dbi.hash_method
+    logging.info(
+        "Database hash method: %s (version %d)",
+        dbi.hash_method,
+        dbi.hash_method_version,
+    )
 
     profile = None
     if params.cpu_profile:

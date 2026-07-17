@@ -57,6 +57,13 @@ API. A full native ImageIO v3 rewrite remains optional and should only be done
 after frame iteration, cropping, metadata, and failure behavior are compared on
 the real legacy-media corpus.
 
+## Hash method migration tooling
+
+Databases now record either the compatible `legacy-center` method or the
+optional `full-frame` method. A future migration command may rebuild an
+existing database into a separate destination database with another method.
+It must never rewrite the method marker without re-hashing every video.
+
 ## Scan filtering follow-ups
 
 - Add repeatable `--exclude-name` for matching directory names anywhere below

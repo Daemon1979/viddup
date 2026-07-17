@@ -11,6 +11,11 @@ Version 1.2 adds layered TOML configuration through `viddup.conf`, independent
 import/search settings, and reusable `balanced`, `precise`, and `sensitive`
 search profiles.
 
+New databases can select one of two hash extraction methods. The default
+`legacy-center` method preserves compatibility with the original project.
+`full-frame` downsamples the complete frame and is more suitable for videos
+whose center stays static while activity occurs elsewhere.
+
 This repository is the modern Python 3.12 port. The initial algorithm is kept
 compatible with the legacy tool while packaging, setup, scanning, and KNN
 backend handling are cleaned up.
@@ -83,6 +88,16 @@ Import/update hashes:
 ```sh
 dupfind --db videos.db --dir /PATH/video
 ```
+
+To create a new database using full-frame brightness:
+
+```sh
+dupfind --db full-frame.db --dir /PATH/video --hash-method full-frame
+```
+
+The method is stored in the database and reused automatically. Existing legacy
+databases are recognized as `legacy-center`; incompatible methods cannot be
+mixed in one database. Changing the method therefore requires a new database.
 
 Directory imports hash several videos in parallel. By default, `dupfind` uses
 the smaller of four workers or the detected CPU thread count minus two, with a

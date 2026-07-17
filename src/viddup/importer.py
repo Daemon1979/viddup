@@ -24,9 +24,19 @@ def default_num_jobs() -> int:
     return max(1, min(cpu_count - 2, 4))
 
 
-def compute_hashes(fname: str, fixduration: bool, show_progress: bool = False) -> HashResult:
+def compute_hashes(
+    fname: str,
+    fixduration: bool,
+    show_progress: bool = False,
+    hash_method: str = "legacy-center",
+) -> HashResult:
     start_time = time.monotonic()
-    index_info, fps, duration, brightness = get_hashes(fname, fixduration, show_progress=show_progress)
+    index_info, fps, duration, brightness = get_hashes(
+        fname,
+        fixduration,
+        show_progress=show_progress,
+        hash_method=hash_method,
+    )
     return HashResult(fname, index_info, fps, duration, brightness, time.monotonic() - start_time)
 
 
@@ -45,7 +55,12 @@ def import_file(dbi, params, fname: str) -> bool:
             logging.info("File %s already imported", fname)
             return False
 
-        result = compute_hashes(fname, params.fixduration, show_progress=True)
+        result = compute_hashes(
+            fname,
+            params.fixduration,
+            show_progress=True,
+            hash_method=params.hash_method,
+        )
         store_hashes(dbi, result)
         logging.info("File %s imported in %s", fname, format_duration(result.elapsed))
         return True
@@ -101,7 +116,13 @@ def _import_directory(dbi, params) -> None:
                 fname = next(files)
             except StopIteration:
                 return False
-            future = executor.submit(compute_hashes, fname, params.fixduration, False)
+            future = executor.submit(
+                compute_hashes,
+                fname,
+                params.fixduration,
+                False,
+                params.hash_method,
+            )
             pending[future] = fname
             return True
 

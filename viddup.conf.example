@@ -6,6 +6,9 @@ nice = 5
 
 [import]
 numjobs = 4
+# Used only when creating a new database. Existing databases keep their
+# recorded method. Default: "legacy-center". Alternative: "full-frame".
+hash_method = "legacy-center"
 exclude_dirs = [
   "/PATH/video/Games",
   "/PATH/video/Photos",

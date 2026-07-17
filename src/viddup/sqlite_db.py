@@ -4,6 +4,7 @@ import logging
 import sqlite3 as sq
 
 from .db_common import DBBase, FileInfo, mk_stmt
+from .hash_methods import DEFAULT_HASH_METHOD, get_hash_method
 
 
 class DB(DBBase):
@@ -25,6 +26,10 @@ class DB(DBBase):
         """Create the database schema if it does not exist already"""
         logging.info("Asserting DB schema is up-to-date")
         with self.cursor() as c:
+            c.execute(
+                "select 1 from sqlite_master where type = 'table' and name = 'filenames'"
+            )
+            existing_database = c.fetchone() is not None
             c.execute("create table if not exists filenames (id INTEGER PRIMARY KEY, name text, fps float, duration float)")
             c.execute("create unique index if not exists name_ux on filenames (name)")
             c.execute("create table if not exists hashes (filename_id int64, frame int, hash float)")
@@ -32,6 +37,52 @@ class DB(DBBase):
             c.execute("create table if not exists brightness (filename_id int64, brightness blob)")
             c.execute("create unique index if not exists whitelist_ux on whitelist (id1, id2)")
             c.execute("create unique index if not exists filename_id_hashes_ux on hashes (filename_id, frame)")
+            c.execute(
+                "create table if not exists metadata "
+                "(key text primary key, value text not null)"
+            )
+
+            requested = getattr(self.params, "hash_method", None)
+            c.execute("select value from metadata where key = 'hash_method'")
+            row = c.fetchone()
+            if row is None:
+                method = get_hash_method(
+                    DEFAULT_HASH_METHOD if existing_database else requested or DEFAULT_HASH_METHOD
+                )
+                metadata = {
+                    "hash_method": method.name,
+                    "hash_method_version": str(method.version),
+                    "video_filter": method.video_filter,
+                    "extrema_distance_seconds": "10",
+                }
+                c.executemany(
+                    "insert into metadata (key, value) values (?, ?)",
+                    metadata.items(),
+                )
+                if existing_database:
+                    logging.info(
+                        "Legacy database detected; recording hash method %s",
+                        method.name,
+                    )
+            else:
+                method = get_hash_method(row[0])
+                c.execute(
+                    "select value from metadata where key = 'hash_method_version'"
+                )
+                version_row = c.fetchone()
+                if version_row is None or int(version_row[0]) != method.version:
+                    raise ValueError(
+                        f"database uses unsupported {method.name} hash method version"
+                    )
+                if requested and requested != method.name:
+                    raise ValueError(
+                        f"database uses hash method {method.name}; "
+                        f"--hash-method {requested} cannot be mixed into it"
+                    )
+
+            self.hash_method = method.name
+            self.hash_method_version = method.version
+        self.conn.commit()
 
     def del_file(self, fid):
         with self.cursor() as c:

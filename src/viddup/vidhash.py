@@ -302,7 +302,7 @@ class VidHashFormat(Format):
                 return '??'
 
         def _open(self, loop=False, size=None, pixelformat=None,
-                  ffmpeg_params=None, print_info=False):
+                  ffmpeg_params=None, print_info=False, video_filter=None):
             # Get exe
             self._exe = self._get_exe()
             # Process input args
@@ -321,6 +321,8 @@ class VidHashFormat(Format):
                 raise ValueError('FFMPEG pixelformat must be str')
             self._arg_pixelformat = pixelformat
             self._arg_ffmpeg_params = ffmpeg_params if ffmpeg_params else []
+            self._arg_video_filter = video_filter or \
+                'crop=in_w/10:in_h/10:in_w*0.45:in_h*0.45'
             # Write "_video"_arg
             self.request._video = None
             if self.request.filename in ['<video%i>' % i for i in range(10)]:
@@ -399,8 +401,7 @@ class VidHashFormat(Format):
                 iargs = []
             # Output args, for writing to pipe
             oargs = ['-vf',
-                         'crop=in_w/10:in_h/10:in_w*0.45:in_h*0.45',
-                         #'crop=20:20:in_w/2-10:in_h/2-10',
+                         self._arg_video_filter,
                          '-f', 'image2pipe',
                         '-pix_fmt', self._pix_fmt,
                         '-vcodec', 'rawvideo']

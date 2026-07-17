@@ -113,6 +113,19 @@ Create or update a database:
 dupfind --db videos.db --dir /PATH/video
 ```
 
+The default `legacy-center` hashing method is compatible with databases made
+by the original tool. To use brightness from the entire frame, select
+`full-frame` while creating a new database:
+
+```sh
+dupfind --db full-frame.db --dir /PATH/video --hash-method full-frame
+```
+
+The selected method is stored in the SQLite database. Later imports and
+searches read it automatically, so `--hash-method` does not need to be repeated.
+An existing database cannot be switched in place because hashes made by
+different methods must not be mixed.
+
 Directory imports use up to four parallel hashing processes by default while
 keeping SQLite writes serialized and atomic. Tune concurrency for the machine
 and storage with `--numjobs`:
@@ -183,6 +196,13 @@ CLI arguments override earlier values. See `viddup.conf.example`.
 Use `[import]` for import-only options and `[search]` for search-only options.
 Their `exclude_dirs` arrays are independent. Inactive sections are ignored, so
 one configuration can safely contain settings for every operation.
+
+For a new database, the import method can also be configured:
+
+```toml
+[import]
+hash_method = "full-frame"
+```
 
 Select a built-in or custom search profile with:
 

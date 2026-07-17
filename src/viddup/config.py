@@ -27,7 +27,7 @@ BUILTIN_PROFILES = {
 }
 
 COMMON_KEYS = {"db", "nice", "knnlib"}
-IMPORT_KEYS = {"numjobs", "exclude_dirs", "vidext"}
+IMPORT_KEYS = {"numjobs", "exclude_dirs", "vidext", "hash_method"}
 SEARCH_KEYS = {
     "profile",
     "exclude_dirs",
