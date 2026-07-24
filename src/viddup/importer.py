@@ -44,6 +44,7 @@ def store_hashes(dbi, result: HashResult) -> None:
     """Atomically replace all database data for one successfully hashed file."""
     with dbi.transaction():
         fi = dbi.insert_file(result.fname, result.fps, result.duration)
+        dbi.delete_media_info(fi.fid)
         dbi.insert_hashes(fi.fid, result.index_info)
         dbi.insert_brightness(fi.fid, result.brightness)
 

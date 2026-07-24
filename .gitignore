@@ -1,5 +1,6 @@
 /.venv/
 /build/
+/tmp/
 /my/
 /my312/
 *.db

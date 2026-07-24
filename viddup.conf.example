@@ -2,7 +2,7 @@
 
 [common]
 db = "videos.db"
-nice = 5
+nice = 10
 
 [import]
 numjobs = 4

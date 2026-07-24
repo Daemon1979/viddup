@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from viddup import importer
+from viddup.db_common import MediaInfo
 from viddup.importer import HashResult, store_hashes
 from viddup.sqlite_db import DB
 
@@ -37,6 +38,9 @@ def test_store_hashes_rolls_back_refresh_to_previous_data(tmp_path: Path, monkey
     original = make_result(path, 1.0)
     store_hashes(db, original)
     fid = db.get_id(path)
+    cached = MediaInfo(fid, "mp4", "h264", 1280, 720, 123456)
+    db.insert_media_infos([cached])
+    db.commit()
 
     monkeypatch.setattr(db, "insert_brightness", lambda *_: (_ for _ in ()).throw(RuntimeError("write failed")))
 
@@ -44,6 +48,7 @@ def test_store_hashes_rolls_back_refresh_to_previous_data(tmp_path: Path, monkey
         store_hashes(db, make_result(path, 9.0))
 
     assert db.get_hashes(fid, 0, 100) == ([10, 20], [1.0, 2.0])
+    assert db.get_media_infos([fid]) == {fid: cached}
     with db.cursor() as cursor:
         cursor.execute("select brightness from brightness where filename_id = ?", [fid])
         assert cursor.fetchone()[0] == "[1.0, 2.0]"

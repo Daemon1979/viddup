@@ -3,7 +3,7 @@ from contextlib import contextmanager
 import logging
 import sqlite3 as sq
 
-from .db_common import DBBase, FileInfo, mk_stmt
+from .db_common import DBBase, FileInfo, MediaInfo, mk_stmt
 from .hash_methods import DEFAULT_HASH_METHOD, get_hash_method
 
 
@@ -35,6 +35,11 @@ class DB(DBBase):
             c.execute("create table if not exists hashes (filename_id int64, frame int, hash float)")
             c.execute("create table if not exists whitelist (id1 INTEGER, id2 INTEGER)")
             c.execute("create table if not exists brightness (filename_id int64, brightness blob)")
+            c.execute(
+                "create table if not exists media_info "
+                "(filename_id INTEGER PRIMARY KEY, extension text, codec text, "
+                "width INTEGER, height INTEGER, file_size INTEGER)"
+            )
             c.execute("create unique index if not exists whitelist_ux on whitelist (id1, id2)")
             c.execute("create unique index if not exists filename_id_hashes_ux on hashes (filename_id, frame)")
             c.execute(
@@ -89,6 +94,7 @@ class DB(DBBase):
             c.execute(self.s["DEL_FILE"], [fid])
             c.execute("delete from hashes where filename_id = ?", [fid])
             c.execute("delete from brightness where filename_id = ?", [fid])
+            c.execute("delete from media_info where filename_id = ?", [fid])
             c.execute("delete from whitelist where id1 = ? or id2 = ?", [fid, fid])
         self.conn.commit()
 
@@ -112,6 +118,36 @@ class DB(DBBase):
             c.execute(self.s["DELETE_BRIGHTNESS"], [fid])
             c.execute(self.s["INSERT_BRIGHTNESS"], [fid, json.dumps(brightness)])
 
+    def delete_media_info(self, fid):
+        with self.cursor() as c:
+            c.execute("delete from media_info where filename_id = ?", [fid])
+
+    def get_media_infos(self, fids):
+        result = {}
+        fids = list(dict.fromkeys(fids))
+        with self.cursor() as c:
+            for start in range(0, len(fids), 900):
+                batch = fids[start:start + 900]
+                placeholders = ",".join("?" for _ in batch)
+                c.execute(
+                    "select filename_id, extension, codec, width, height, "
+                    f"file_size from media_info where filename_id in ({placeholders})",
+                    batch,
+                )
+                for row in c.fetchall():
+                    info = MediaInfo._make(row)
+                    result[info.filename_id] = info
+        return result
+
+    def insert_media_infos(self, media_infos):
+        with self.cursor() as c:
+            c.executemany(
+                "insert or replace into media_info "
+                "(filename_id, extension, codec, width, height, file_size) "
+                "values (?, ?, ?, ?, ?, ?)",
+                media_infos,
+            )
+
     def insert_file(self, fname, fps, duration):
         fid = self.get_id(fname)
         if fid is None:
@@ -133,6 +169,7 @@ class DB(DBBase):
             with self.cursor() as c:
                 c.execute("delete from hashes where filename_id not in (select id from filenames)")
                 c.execute("delete from brightness where filename_id not in (select id from  filenames)")
+                c.execute("delete from media_info where filename_id not in (select id from filenames)")
                 c.execute("delete from whitelist where id1 not in (select id from filenames)")
                 c.execute("delete from whitelist where id2 not in (select id from filenames)")
             self.conn.commit()

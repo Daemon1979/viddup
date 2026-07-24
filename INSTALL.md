@@ -113,6 +113,9 @@ Create or update a database:
 dupfind --db videos.db --dir /PATH/video
 ```
 
+The process, hashing workers, and FFmpeg children use nice level `10` by
+default. Change it with `--nice LEVEL` or `nice = LEVEL` in `[common]`.
+
 The default `legacy-center` hashing method is compatible with databases made
 by the original tool. To use brightness from the entire frame, select
 `full-frame` while creating a new database:
@@ -150,6 +153,18 @@ Search duplicates:
 ```sh
 dupfind --db videos.db --search
 ```
+
+Result lines show the matched position and enough metadata to compare copies:
+
+```text
+match=00:03:02 duration=00:18:41 ext=mp4 codec=h264 resolution=1920x1080 size=1.42 GiB path=/PATH/video/example.mp4
+```
+
+The total duration comes from the database. Codec and resolution are queried
+in parallel with `ffprobe` only for files included in duplicate groups and are
+then cached in SQLite. Existing databases receive the cache table
+automatically. A later search reuses cached values; `--refresh` invalidates the
+entry for that file.
 
 The default search uses fingerprint length 12 and radius 3. This provides a
 practical balance between useful matches and false positives:

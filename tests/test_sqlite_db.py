@@ -1,6 +1,7 @@
 from pathlib import Path
 from types import SimpleNamespace
 
+from viddup.db_common import MediaInfo
 from viddup.sqlite_db import DB
 
 
@@ -85,3 +86,17 @@ def test_database_rejects_mixed_hash_methods(tmp_path):
 
     with pytest.raises(ValueError, match="cannot be mixed"):
         DB(SimpleNamespace(db=str(path), hash_method="legacy-center"))
+
+
+def test_media_info_cache_is_created_stored_and_deleted(tmp_path):
+    db = DB(SimpleNamespace(db=str(tmp_path / "videos.db")))
+    fileinfo = db.insert_file("/videos/example.mp4", 25.0, 60.0)
+    cached = MediaInfo(fileinfo.fid, "mp4", "h264", 1920, 1080, 123456)
+    db.insert_media_infos([cached])
+    db.commit()
+
+    assert db.get_media_infos([fileinfo.fid]) == {fileinfo.fid: cached}
+
+    db.del_file(fileinfo.fid)
+
+    assert db.get_media_infos([fileinfo.fid]) == {}

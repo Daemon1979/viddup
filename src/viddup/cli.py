@@ -14,13 +14,14 @@ from tqdm import tqdm
 
 from . import FileInfo  # noqa: F401  FileInfo needed by yaml Loader
 from .config import ConfigError, load_config, resolve_defaults
+from .duplicate_report import log_duplicate_groups
 from .importer import default_num_jobs, handle_import
 from .hash_methods import HASH_METHODS
 from .knn import BACKENDS, available_backends, default_backend_name
 from .scanner import get_files
 from .search import handle_search
 from .settings import KNOWN_VID_TYPES_DEFAULT
-from .utils import parse_extensions, format_duration
+from .utils import parse_extensions
 
 
 class TqdmStream:
@@ -179,10 +180,7 @@ def handle_searchres(dbi, params):
     if params.ui:
         raise NotImplementedError("The legacy UI was not ported yet")
 
-    for match in duplicates:
-        logging.info("Group of %d files found", len(match))
-        for fileinfo, offset in match:
-            logging.info("ffplay -ss %s '%s'", format_duration(offset), fileinfo.name)
+    log_duplicate_groups(dbi, duplicates, params.numjobs)
 
 
 def fixfilenames(args):
@@ -204,7 +202,12 @@ def build_parser(defaults: dict | None = None) -> argparse.ArgumentParser:
     parser.add_argument("--purge", default=False, action="store_true", help="Purge deleted files from database (dry run mode)")
     parser.add_argument("--delete", default=False, action="store_true", help="Really delete from database in purge")
     parser.add_argument("--vacuum", default=False, action="store_true", help="Do vacuum on db")
-    parser.add_argument("--nice", type=int, help="Nice level for background operation, default 5", default=5)
+    parser.add_argument(
+        "--nice",
+        type=int,
+        help="Nice level inherited by hashing and FFmpeg processes, default %(default)s",
+        default=10,
+    )
     parser.add_argument("--dir", help="Import video hashes from directory and its subdirectories")
     parser.add_argument(
         "--numjobs",

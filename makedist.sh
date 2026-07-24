@@ -26,6 +26,54 @@ mkdir -p "$DIST_DIR"
 WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/${PROJECT_NAME}-dist.XXXXXX")
 trap 'rm -rf "$WORK_DIR"' EXIT HUP INT TERM
 
+copy_worktree_file() {
+    path=$1
+    target="$WORK_DIR/$ROOT_NAME/$path"
+    mkdir -p "$(dirname "$target")"
+    cp -p "$path" "$target"
+}
+
+copy_commit_file() {
+    path=$1
+    target="$WORK_DIR/$ROOT_NAME/$path"
+    mkdir -p "$(dirname "$target")"
+    git show "$COMMIT:$path" >"$target"
+}
+
+copy_file() {
+    if [ "$VERSION" = dev ]; then
+        copy_worktree_file "$1"
+    else
+        copy_commit_file "$1"
+    fi
+}
+
+copy_production_files() {
+    copy_file pyproject.toml
+    copy_file README.md
+    copy_file INSTALL.md
+    copy_file INSTALL_UA.md
+    copy_file viddup.conf.example
+    copy_file dupfind.sh
+    copy_file makedist.sh
+
+    if [ "$VERSION" = dev ]; then
+        find src/viddup -type f -name '*.py' -print | sort |
+            while IFS= read -r path; do
+                copy_file "$path"
+            done
+    else
+        git ls-tree -r --name-only "$COMMIT" -- src/viddup |
+            while IFS= read -r path; do
+                case "$path" in
+                    *.py) copy_file "$path" ;;
+                esac
+            done
+    fi
+    chmod +x "$WORK_DIR/$ROOT_NAME/dupfind.sh" \
+        "$WORK_DIR/$ROOT_NAME/makedist.sh"
+}
+
 if [ "$#" -eq 1 ]; then
     COMMIT=$(git rev-parse --verify "$1^{commit}") || {
         echo "unknown commit: $1" >&2
@@ -34,36 +82,13 @@ if [ "$#" -eq 1 ]; then
     VERSION=$(git rev-parse --short "$COMMIT")
     ROOT_NAME="${PROJECT_NAME}-${VERSION}"
     mkdir -p "$WORK_DIR/$ROOT_NAME"
-    git archive "$COMMIT" | tar -xf - -C "$WORK_DIR/$ROOT_NAME"
 else
     VERSION=dev
     ROOT_NAME="${PROJECT_NAME}-dev"
-    MANIFEST="$WORK_DIR/manifest.txt"
     mkdir -p "$WORK_DIR/$ROOT_NAME"
-
-    git ls-files --cached --others --exclude-standard | while IFS= read -r path; do
-        case "$path" in
-            .gitignore|dist/*|build/*|docs/TODO.md|*.db|*.db-*|*.sqlite|*.log)
-                continue
-                ;;
-        esac
-        if [ -f "$path" ]; then
-            printf '%s\n' "$path"
-        fi
-    done >"$MANIFEST"
-
-    tar -cf - -T "$MANIFEST" | tar -xf - -C "$WORK_DIR/$ROOT_NAME"
 fi
 
-# These paths may exist in old commits but are local/development artifacts.
-rm -rf \
-    "$WORK_DIR/$ROOT_NAME/.git" \
-    "$WORK_DIR/$ROOT_NAME/.venv" \
-    "$WORK_DIR/$ROOT_NAME/build" \
-    "$WORK_DIR/$ROOT_NAME/dist" \
-    "$WORK_DIR/$ROOT_NAME/my" \
-    "$WORK_DIR/$ROOT_NAME/my312"
-rm -f "$WORK_DIR/$ROOT_NAME/docs/TODO.md" "$WORK_DIR/$ROOT_NAME/.gitignore"
+copy_production_files
 
 ARCHIVE="$DIST_DIR/${ROOT_NAME}.tar.gz"
 tar -czf "$ARCHIVE" -C "$WORK_DIR" "$ROOT_NAME"

@@ -2,6 +2,9 @@ from collections import namedtuple
 from contextlib import contextmanager
 
 FileInfo = namedtuple("FileInfo", "fid, name, fps, duration")
+MediaInfo = namedtuple(
+    "MediaInfo", "filename_id, extension, codec, width, height, file_size"
+)
 
 
 def mk_stmt(db_mod):

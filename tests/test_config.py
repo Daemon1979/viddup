@@ -76,6 +76,18 @@ def test_config_database_satisfies_required_cli_option():
     assert args.db == "configured.db"
 
 
+def test_nice_defaults_to_ten_and_can_be_overridden():
+    default_args = build_parser().parse_args(["--db", "videos.db"])
+    configured_args = build_parser({"nice": 12}).parse_args(["--db", "videos.db"])
+    cli_args = build_parser({"nice": 12}).parse_args(
+        ["--db", "videos.db", "--nice", "7"]
+    )
+
+    assert default_args.nice == 10
+    assert configured_args.nice == 12
+    assert cli_args.nice == 7
+
+
 def test_import_hash_method_is_loaded_from_config():
     config = {"import": {"hash_method": "full-frame"}}
 

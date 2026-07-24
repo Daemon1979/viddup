@@ -11,6 +11,10 @@ Version 1.2 adds layered TOML configuration through `viddup.conf`, independent
 import/search settings, and reusable `balanced`, `precise`, and `sensitive`
 search profiles.
 
+Version 1.3 adds versioned legacy/full-frame hash extraction, richer duplicate
+result metadata with a persistent SQLite cache, a default nice level of 10,
+and a strict production allowlist for portable source archives.
+
 New databases can select one of two hash extraction methods. The default
 `legacy-center` method preserves compatibility with the original project.
 `full-frame` downsamples the complete frame and is more suitable for videos
@@ -89,6 +93,18 @@ Import/update hashes:
 dupfind --db videos.db --dir /PATH/video
 ```
 
+`dupfind` runs at nice level `10` by default, including its hashing workers and
+FFmpeg children. Override it from the command line or configuration:
+
+```sh
+dupfind --db videos.db --dir /PATH/video --nice 5
+```
+
+```toml
+[common]
+nice = 5
+```
+
 To create a new database using full-frame brightness:
 
 ```sh
@@ -138,6 +154,18 @@ Search duplicates:
 ```sh
 dupfind --db videos.db --search
 ```
+
+Each result includes the match position, total video duration, extension,
+video codec, resolution, file size, and full path:
+
+```text
+match=00:03:02 duration=00:18:41 ext=mp4 codec=h264 resolution=1920x1080 size=1.42 GiB path=/PATH/video/example.mp4
+```
+
+Codec and resolution are collected in parallel with `ffprobe` only for files
+present in the final result groups. The result is cached in the SQLite database,
+so later searches do not probe the same files again. Refreshing or deleting a
+file also invalidates or removes its cached metadata.
 
 The default search uses a fingerprint length of 12 and radius 3. This was found
 to provide a good balance between useful matches and false positives on large

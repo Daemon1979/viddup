@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from .knn import create_backend
 from .scanner import is_path_under, normalize_excludes
-from .utils import format_duration
+from .duplicate_report import log_duplicate_groups
 
 
 BRIGHTNESS_SAMPLES = 1000
@@ -262,7 +262,4 @@ def handle_search(dbi, params):
         logging.info("No candidates found, giving up")
         return
 
-    for match in duplicates:
-        logging.info("Group of %d files found", len(match))
-        for fileinfo, offset, *_ in match:
-            logging.info("ffplay -ss %s '%s'", format_duration(offset), fileinfo.name)
+    log_duplicate_groups(dbi, duplicates, params.numjobs)
